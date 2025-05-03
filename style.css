@@ -240,8 +240,30 @@ main a:hover {
     margin-right: 2rem;
     padding: 2rem;
     max-width: 800px;
+    background-color: rgba(59, 58, 54, 0.1);
+    backdrop-filter: blur(10px);
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 767px) {
+    .content-container {
+        margin-left: 0.75rem;
+        margin-right: 0.75rem;
+        padding: 1.25rem;
+    }
+    
+    /* Adjust header spacing on mobile */
+    header {
+        padding: 10px 15px;
+    }
+    
+    /* Make hamburger menu more accessible on small screens */
+    .hamburger {
+        top: 15px;
+        right: 15px;
+    }
 }
 
 /* For non-WebGL pages, use solid background */
