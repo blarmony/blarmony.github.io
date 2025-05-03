@@ -1,0 +1,350 @@
+# Blarmony Project Rules
+
+## Post Types and Directory Structure
+
+### Standard Posts
+- Standard posts should be placed in their respective category directories
+- Use the standard post template (see templates section below)
+- Update both the main index.html and the category index.html when adding a new post
+
+### Special Posts with Custom Styling/Background
+- Place in the appropriate category directory
+- Include custom CSS in a `<style>` tag within the head section
+- If using a WebGL or Three.js background, place in the `webGL` directory
+- For complex backgrounds, consider creating a separate CSS file in the category directory
+
+### WebGL/Three.js Posts
+- All WebGL/Three.js related posts must be placed in the `webGL` directory
+- Follow the WebGL performance guidelines (see Performance section)
+- Use the WebGL post template (see templates section below)
+
+## Templates
+
+### Front Matter
+- All posts must include front matter at the top of the file
+- Front matter must be wrapped in HTML comments `<!-- -->` 
+- Front matter uses YAML format with triple dashes `---` at the start and end
+- Required front matter fields:
+  - `title`: The title of the post in quotes
+  - `date`: The publication date in YYYY-MM-DD format
+  - `categories`: An array of categories in square brackets
+  - `tags`: An array of relevant tags in square brackets
+- Example front matter:
+  ```html
+  <!--
+  ---
+  title: "Post Title"
+  date: 2025-05-03
+  categories: ["category-name"]
+  tags: ["tag1", "tag2", "tag3"]
+  ---
+  -->
+  ```
+- The front matter is used for site generation, SEO, and categorization
+- Always update the date to the current date when creating a new post
+
+### Standard Post Template
+```html
+<!--
+---
+title: "Post Title"
+date: YYYY-MM-DD
+categories: ["category-name"]
+tags: ["tag1", "tag2"]
+---
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Post Title</title>
+		<link rel="stylesheet" href="../style.css">
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	</head>
+	<body>
+		<main>
+			<div class="content-container">
+				<h1>Post Title</h1>
+				
+				<!-- Post content here -->
+				
+			</div>
+		</main>
+		<script src="../menu.js"></script>
+	</body>
+</html>
+```
+
+### WebGL Post Template
+```html
+<!--
+---
+title: "WebGL Post Title"
+date: YYYY-MM-DD
+categories: ["webgl"]
+tags: ["tag1", "tag2"]
+---
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>WebGL Post Title</title>
+		<link rel="stylesheet" href="../style.css">
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				margin: 0; 
+				display: block;
+			}
+			#container {
+				position: absolute;
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body class="webgl-background">
+		<!-- Container for the WebGL content -->
+		<div id="container"></div>
+
+		<main>
+			<div class="content-container">
+				<h1>WebGL Post Title</h1>
+				
+				<!-- Post content here -->
+				
+			</div>
+		</main>
+
+		<!-- Vertex shader script -->
+		<script id="vertexShader" type="x-shader/x-vertex">
+			varying vec2 vUv;
+
+			void main() {
+				vUv = uv;
+				gl_Position = vec4(position, 1.0);
+			}
+		</script>
+
+		<!-- Fragment shader script -->
+		<script id="fragmentShader" type="x-shader/x-fragment">
+			varying vec2 vUv;
+			uniform float time;
+
+			void main() {
+				// Shader code here
+				gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+			}
+		</script>
+
+		<!-- Import map for three.js library -->
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "https://unpkg.com/three@0.145.0/build/three.module.js",
+					"three/addons/": "https://unpkg.com/three@0.145.0/examples/jsm/"
+				}
+			}
+		</script>
+
+		<!-- JavaScript code for the WebGL application -->
+		<script type="module">
+			// Import three.js library
+			import * as THREE from 'three';
+
+			// Global variables for the application
+			let camera, scene, renderer;
+			let uniforms;
+
+			// Initialize the application
+			init();
+
+			function init() {
+				// Get the container element for the WebGL content
+				const container = document.getElementById('container');
+
+				// Create the camera
+				camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+				// Create the scene
+				scene = new THREE.Scene();
+
+				// Create the geometry for the plane
+				const geometry = new THREE.PlaneGeometry(2, 2);
+
+				// Create the uniform variables for the shaders
+				uniforms = {
+					time: { value: 1.0 }
+				};
+
+				// Create the material for the plane
+				const material = new THREE.ShaderMaterial({
+					uniforms: uniforms,
+					vertexShader: document.getElementById('vertexShader').textContent,
+					fragmentShader: document.getElementById('fragmentShader').textContent
+				});
+
+				// Create the mesh for the plane
+				const mesh = new THREE.Mesh(geometry, material);
+
+				// Add the mesh to the scene
+				scene.add(mesh);
+
+				// Create the renderer
+				renderer = new THREE.WebGLRenderer();
+
+				// Set the pixel ratio for the renderer
+				renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
+
+				// Set the size of the renderer
+				renderer.setSize(window.innerWidth, window.innerHeight);
+
+				// Set the animation loop for the renderer
+				renderer.setAnimationLoop(animate);
+
+				// Add the renderer to the container
+				container.appendChild(renderer.domElement);
+
+				// Add event listener for window resize
+				window.addEventListener('resize', onWindowResize);
+			}
+
+			function onWindowResize() {
+				// Update the size of the renderer
+				renderer.setSize(window.innerWidth, window.innerHeight);
+			}
+
+			function animate() {
+				// Update the time uniform
+				uniforms['time'].value = performance.now() / 1000;
+
+				// Render the scene
+				renderer.render(scene, camera);
+			}
+		</script>
+		<script src="../menu.js"></script>
+	</body>
+</html>
+```
+
+## WebGL/Three.js Performance Guidelines
+
+### CRITICAL: Animation Loop Implementation
+- ALWAYS use Three.js's built-in animation loop: `renderer.setAnimationLoop(animate)`
+- NEVER use manual `requestAnimationFrame` with recursive calls
+- Keep the animation function simple with minimal state tracking
+
+### Shader Optimization
+- Avoid complex noise functions (like FBM) that are expensive on mobile GPUs
+- Use simple mathematical operations where possible
+- Prefer sine/cosine over more expensive operations like tangent, power, and square root
+- Avoid procedural noise generation in favor of pre-computed textures
+- Minimize the number of uniform variables that change each frame
+
+### Mobile Optimization
+- Implement device detection: 
+  ```javascript
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  ```
+- Limit pixel ratio on mobile: 
+  ```javascript
+  renderer.setPixelRatio(isMobile ? Math.min(window.devicePixelRatio * 0.6, 1.0) : Math.min(window.devicePixelRatio, 2.0));
+  ```
+- Disable antialiasing on mobile: 
+  ```javascript
+  renderer = new THREE.WebGLRenderer({ antialias: !isMobile });
+  ```
+- Limit frame rate to 30fps on mobile to save battery
+- Use 'mediump' precision in shaders on mobile devices
+
+### Memory Management
+- Implement proper cleanup to prevent memory leaks:
+  ```javascript
+  window.addEventListener('beforeunload', () => {
+    // Dispose of Three.js resources
+    scene.traverse(object => {
+      if (object.geometry) object.geometry.dispose();
+      if (object.material) {
+        if (object.material.map) object.material.map.dispose();
+        object.material.dispose();
+      }
+    });
+    renderer.dispose();
+  });
+  ```
+- Track animation frame IDs and cancel them when not needed
+- Implement page visibility detection to pause rendering when tab is inactive:
+  ```javascript
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      // Resume animation
+    } else {
+      // Pause animation
+    }
+  });
+  ```
+
+### Mobile-Specific UI Handling
+- Handle address bar hiding/showing on mobile:
+  ```javascript
+  if (isMobile) {
+    // Add extra height on mobile to prevent gaps when address bar hides
+    const mobileHeight = window.innerHeight * 1.15;
+    renderer.domElement.style.height = mobileHeight + 'px';
+  }
+  ```
+
+## Updating Site Navigation
+
+### Front Page Updates
+- When adding a new post, add it to the top of the list in `/index.html`
+- Include a descriptive summary of the post
+- Format: `<li><a href="category/post-name.html">Post Title</a> - Brief description</li>`
+
+### Category Page Updates
+- Add the new post to the appropriate category index page
+- For WebGL posts, update `/webGL/index.html`
+- Format: `<li><a href="post-name.html">Post Title</a> - Brief description</li>`
+
+## Content Guidelines
+
+### Post Structure
+- Start with a clear introduction explaining the purpose of the post
+- Use proper heading hierarchy (h1 for title, h2 for main sections, h3 for subsections)
+- Include code examples with syntax highlighting where appropriate
+- End with a conclusion or summary
+
+### Code Examples
+- Use Prism.js for syntax highlighting
+- Include the following for code highlighting:
+  ```html
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+  ```
+- Format code examples using:
+  ```html
+  <pre><code class="language-javascript">
+  // Your code here
+  </code></pre>
+  ```
+
+## Testing Guidelines
+
+### Cross-Browser Testing
+- Test in at least Chrome, Firefox, and Safari
+- Ensure responsive design works on different screen sizes
+
+### Mobile Testing
+- Test on actual mobile devices, not just emulators
+- Verify performance remains stable over extended periods (1+ minutes)
+- Check for layout issues when rotating device or when address bar appears/disappears
+
+### WebGL Performance Testing
+- Monitor FPS during development (can be hidden in production)
+- Test with extended usage to check for memory leaks or performance degradation
+- Verify cleanup functions work properly when navigating away from the page
