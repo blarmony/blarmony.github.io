@@ -1,0 +1,540 @@
+/* Import modern fonts from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500;700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+
+/* Base typography */
+:root {
+    --font-primary: 'Space Grotesk', sans-serif;    /* Modern, geometric sans-serif */
+    --font-secondary: 'Outfit', sans-serif;         /* Clean, minimal sans-serif */
+    --font-body: 'DM Sans', sans-serif;             /* Readable, friendly sans-serif */
+}
+
+body {
+    font-family: var(--font-body);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #3b3a36; /* Medium to dark grey with a brownish hue */
+    color: #f5f5dc; /* Off-white cream color */
+    font-size: 16px;
+    font-weight: 400;
+}
+
+header {
+    background-color: transparent;
+    color: #fff;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative; /* Ensure header is positioned relative to allow absolute positioning inside */
+}
+
+header img {
+    height: 50px;
+}
+
+/* Responsive header positioning to align with content-container */
+@media (min-width: 900px) {
+    header {
+        padding-left: 4rem;
+    }
+}
+
+@media (min-width: 1000px) {
+    header {
+        padding-left: 0;
+        width: 100%;
+        max-width: calc(800px + 4rem); /* content width + padding */
+        margin: 0 auto;
+    }
+}
+
+@media (min-width: 1400px) {
+    header {
+        margin: 0;
+        margin-left: 300px;
+    }
+}
+
+nav {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+nav ul li {
+    display: inline;
+    margin-right: 10px;
+}
+
+nav ul li a {
+    color: #fff;
+    text-decoration: none;
+}
+
+.menu {
+    display: none;
+    flex-direction: column;
+    background-color: #333;
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    border-radius: 5px;
+    padding: 10px;
+    min-width: 200px;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.menu.active {
+    display: flex;
+}
+
+.menu li {
+    list-style: none;
+    margin: 5px 0;
+    text-align: right;
+}
+
+.menu li a {
+    font-family: var(--font-secondary);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: #fff;
+    text-decoration: none;
+    display: block;
+    padding: 10px 20px;
+    transition: background-color 0.3s ease;
+}
+
+.menu li a:hover {
+    background-color: #444;
+    border-radius: 3px;
+}
+
+.hamburger {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    width: 30px;
+    height: 30px;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1001;
+    font-family: var(--font-secondary);
+}
+
+.hamburger div {
+    width: 30px;
+    height: 3px;
+    background-color: #fff;
+    margin: 2px 0;
+    transition: all 0.3s ease;
+}
+
+.hamburger.active div:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger.active div:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger.active div:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -6px);
+}
+
+main {
+    padding: 20px;
+}
+
+/* Typography scale */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-primary);
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+}
+
+h1 {
+    font-size: 2.5rem;
+    margin-top: 0.5em;
+}
+
+h2 {
+    font-size: 2rem;
+}
+
+h3 {
+    font-size: 1.5rem;
+}
+
+h4 {
+    font-size: 1.25rem;
+}
+
+/* Accent typography */
+/* Post titles */
+#recent-posts a {
+    font-family: var(--font-primary);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: #b0cfe8; /* Slightly different shade for post links */
+}
+
+#recent-posts a:hover {
+    color: #d5e9f7;
+}
+
+/* Body text refinements */
+p {
+    margin-bottom: 1.5em;
+    font-size: 1rem;
+}
+
+/* Small text */
+small, .text-small {
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+}
+
+/* Default link styling */
+a {
+    color: #a0c4e4; /* Pale blue */
+    text-decoration: none;
+    transition: color 0.3s ease, text-decoration 0.3s ease;
+}
+
+a:hover {
+    color: #c5dff2; /* Lighter pale blue on hover */
+    text-decoration: none;
+}
+
+a:visited {
+    color: #8babc7; /* Slightly darker pale blue for visited links */
+}
+
+/* Content links (different from navigation links) */
+main a {
+    border-bottom: 1px dotted #a0c4e4;
+    padding-bottom: 2px;
+}
+
+main a:hover {
+    border-bottom: 1px solid #c5dff2;
+}
+
+/* Content container for all pages */
+.content-container {
+    margin-top: 6rem;
+    margin-left: 2rem;
+    margin-right: 2rem;
+    padding: 2rem;
+    max-width: 800px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* For non-WebGL pages, use solid background */
+body:not(.webgl-background) .content-container {
+    background-color: #3b3a36;
+}
+
+/* For WebGL pages, use semi-transparent background with blur */
+.webgl-background .content-container {
+    background-color: rgba(59, 58, 54, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+/* Responsive positioning for content container */
+@media (min-width: 900px) {
+    .content-container {
+        margin-left: 4rem;
+    }
+}
+
+/* Center the content container on medium screens */
+@media (min-width: 1000px) {
+    main {
+        display: flex;
+        justify-content: center;
+    }
+    
+    .content-container {
+        margin-left: 2rem;
+        margin-right: 2rem;
+    }
+}
+
+/* Fix position once left gap reaches 300px */
+@media (min-width: 1400px) {
+    main {
+        display: block;
+        padding-left: 300px;
+    }
+    
+    .content-container {
+        margin-left: 0;
+    }
+}
+
+/* WebGL background page styles */
+.webgl-background {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto !important;
+}
+
+.webgl-background #container {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1; /* Place the container behind other elements */
+}
+
+.webgl-background header {
+    background-color: transparent !important;
+    position: absolute;
+    width: 100%;
+    z-index: 10;
+}
+
+.webgl-background .menu {
+    background-color: rgba(51, 51, 51, 0.7) !important;
+    backdrop-filter: blur(5px);
+}
+
+.webgl-background .hamburger {
+    position: fixed !important;
+    top: 15px !important;
+    right: 15px !important;
+}
+
+.webgl-background .hamburger div {
+    background-color: #fff;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+}
+
+.webgl-background main {
+    background-color: transparent !important;
+    position: relative;
+    z-index: 5;
+}
+
+/* Code styling */
+pre {
+    background-color: rgba(30, 30, 30, 0.8);
+    border-radius: 6px;
+    padding: 1rem;
+    margin: 1.5rem 0;
+    overflow-x: auto;
+    position: relative;
+    border-left: 4px solid #7e57c2;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+code {
+    font-family: 'Fira Code', 'Cascadia Code', 'Source Code Pro', Consolas, monospace;
+    font-size: 0.9rem;
+    letter-spacing: -0.025em;
+    color: #e0e0e0;
+}
+
+.webgl-background pre {
+    background-color: rgba(30, 30, 30, 0.7);
+    backdrop-filter: blur(5px);
+}
+
+/* Prism.js theme overrides */
+:not(pre) > code[class*="language-"],
+pre[class*="language-"] {
+    background-color: rgba(30, 30, 30, 0.8);
+    border-radius: 6px;
+    border-left: 4px solid #7e57c2;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.webgl-background :not(pre) > code[class*="language-"],
+.webgl-background pre[class*="language-"] {
+    background-color: rgba(30, 30, 30, 0.7);
+    backdrop-filter: blur(5px);
+}
+
+/* Hover effect for code blocks */
+pre:hover {
+    box-shadow: 0 0 15px rgba(126, 87, 194, 0.3);
+    transition: box-shadow 0.3s ease;
+}
+
+/* Add a language indicator to code blocks */
+pre[class*="language-"]::before {
+    content: attr(data-language);
+    position: absolute;
+    top: 0;
+    right: 1rem;
+    font-size: 0.7rem;
+    color: #858585;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Language-specific styling */
+pre.language-html::before {
+    content: "HTML";
+}
+
+pre.language-css::before {
+    content: "CSS";
+}
+
+pre.language-javascript::before, 
+pre.language-js::before {
+    content: "JavaScript";
+}
+
+pre.language-glsl::before {
+    content: "GLSL";
+}
+
+/* Syntax highlighting */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+    color: #6a9955; /* Green for comments */
+}
+
+.token.punctuation {
+    color: #d4d4d4; /* Light gray for punctuation */
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol {
+    color: #569cd6; /* Blue for properties, tags, etc. */
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin {
+    color: #ce9178; /* Orange-brown for strings */
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+    color: #d4d4d4; /* Light gray for operators */
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+    color: #c586c0; /* Purple for keywords */
+}
+
+.token.function,
+.token.class-name {
+    color: #dcdcaa; /* Yellow for functions and classes */
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+    color: #9cdcfe; /* Light blue for variables */
+}
+
+.token.important,
+.token.bold {
+    font-weight: bold;
+}
+
+.token.italic {
+    font-style: italic;
+}
+
+/* HTML specific */
+.language-html .token.tag {
+    color: #569cd6; /* Blue for HTML tags */
+}
+
+.language-html .token.attr-name {
+    color: #9cdcfe; /* Light blue for HTML attributes */
+}
+
+.language-html .token.attr-value,
+.language-html .token.string {
+    color: #ce9178; /* Orange-brown for attribute values */
+}
+
+.language-html .token.entity {
+    color: #569cd6; /* Blue for entities like &nbsp; */
+    cursor: help;
+}
+
+.language-html .token.doctype {
+    color: #6a9955; /* Green for doctype */
+    font-style: italic;
+}
+
+/* CSS specific */
+.language-css .token.selector {
+    color: #d7ba7d; /* Gold for CSS selectors */
+}
+
+.language-css .token.property {
+    color: #9cdcfe; /* Light blue for CSS properties */
+}
+
+.language-css .token.function {
+    color: #dcdcaa; /* Yellow for CSS functions like rgb() */
+}
+
+.language-css .token.hexcode {
+    color: #ce9178; /* Orange-brown for hex colors */
+}
+
+.language-css .token.number {
+    color: #b5cea8; /* Light green for numbers */
+}
+
+.language-css .token.important {
+    color: #569cd6; /* Blue for !important */
+    font-weight: bold;
+}
+
+/* Line numbers */
+.line-numbers .line-numbers-rows {
+    border-right: 1px solid #404040;
+}
+
+.line-numbers-rows > span:before {
+    color: #858585;
+}
+
+/* Inline code in WebGL pages needs special handling */
+.webgl-background code {
+    background-color: rgba(30, 30, 30, 0.5);
+    backdrop-filter: blur(3px);
+}
+
+.webgl-background pre {
+    background-color: rgba(30, 30, 30, 0.5);
+    backdrop-filter: blur(3px);
+}
