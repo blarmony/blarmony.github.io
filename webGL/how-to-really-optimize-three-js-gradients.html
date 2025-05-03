@@ -1,0 +1,401 @@
+<!--
+---
+title: "How to Really Optimize Three.js Gradients"
+date: 2025-05-03
+categories: ["webgl"]
+tags: ["optimization", "performance", "three.js", "mobile"]
+---
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>How to Really Optimize Three.js Gradients</title>
+		<link rel="stylesheet" href="../style.css">
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<!-- Add Prism.js for syntax highlighting -->
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+		<style>
+			body {
+				margin: 0; 
+				display: block;
+			}
+			#container {
+				position: absolute;
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+			}
+			.code-comparison {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 1rem;
+				margin: 2rem 0;
+			}
+			.code-comparison > div {
+				background-color: rgba(30, 30, 30, 0.8);
+				padding: 1rem;
+				border-radius: 4px;
+			}
+			.code-comparison h4 {
+				margin-top: 0;
+				color: #f0f0f0;
+			}
+			.warning-box {
+				background-color: rgba(255, 100, 100, 0.2);
+				border-left: 4px solid #ff6b6b;
+				padding: 1rem;
+				margin: 1.5rem 0;
+				border-radius: 0 4px 4px 0;
+			}
+			.success-box {
+				background-color: rgba(100, 255, 100, 0.2);
+				border-left: 4px solid #51cf66;
+				padding: 1rem;
+				margin: 1.5rem 0;
+				border-radius: 0 4px 4px 0;
+			}
+		</style>
+	</head>
+	<body class="webgl-background">
+		<!-- Container for the WebGL content -->
+		<div id="container"></div>
+
+		<main>
+			<div class="content-container">
+				<h1>How to Really Optimize Three.js Gradients</h1>
+				
+				<p>Creating beautiful, animated gradient backgrounds with Three.js can add a stunning visual element to your website. However, ensuring these gradients perform well across all devices—especially mobile—requires understanding some non-obvious optimization techniques.</p>
+				
+				<p>After extensive testing and debugging, we've discovered that the most critical performance factors aren't always where you'd expect them to be. This guide shares hard-won insights about what <em>really</em> matters for Three.js gradient performance.</p>
+
+				<h2>The Surprising Truth About Shader Complexity</h2>
+				
+				<p>One of our most counter-intuitive findings is that visually complex shaders aren't necessarily performance killers. In fact, a shader with seemingly complex mathematical operations can sometimes outperform a "simplified" shader that uses more modern techniques.</p>
+				
+				<div class="warning-box">
+					<strong>Common Misconception:</strong> Breaking down complex shader math into simpler, more readable functions will improve performance.
+				</div>
+				
+				<p>The reality is that what looks complex to humans may be efficiently processed by GPUs. Modern GPUs are highly optimized for certain mathematical operations, and restructuring code for human readability can sometimes introduce performance penalties.</p>
+
+				<h2>Critical Performance Factors</h2>
+				
+				<h3>1. Animation Loop Implementation</h3>
+				
+				<p>The single most important factor for sustained performance is how you implement your animation loop. This is especially true for animations that run continuously for extended periods.</p>
+				
+				<div class="code-comparison">
+					<div>
+						<h4>✅ Optimal Approach</h4>
+						<pre><code class="language-javascript">// Let Three.js manage the animation loop
+renderer.setAnimationLoop(animate);
+
+function animate() {
+    uniforms['time'].value = performance.now() / 1000;
+    renderer.render(scene, camera);
+}</code></pre>
+					</div>
+					<div>
+						<h4>❌ Problematic Approach</h4>
+						<pre><code class="language-javascript">// Manual animation loop management
+function animate(timestamp) {
+    requestAnimationFrame(animate);
+    
+    // Complex timing logic
+    if (timestamp - lastFrameTime < frameInterval) {
+        return;
+    }
+    
+    lastFrameTime = timestamp;
+    uniforms['time'].value = timestamp / 1000;
+    renderer.render(scene, camera);
+}</code></pre>
+					</div>
+				</div>
+				
+				<p>Using Three.js's built-in <code>setAnimationLoop</code> method provides several critical benefits:</p>
+				
+				<ul>
+					<li>Prevents frame pileup that can occur with manual <code>requestAnimationFrame</code> calls</li>
+					<li>Properly handles context loss and restoration</li>
+					<li>Integrates with browser rendering optimizations</li>
+					<li>Reduces JavaScript overhead between frames</li>
+				</ul>
+				
+				<div class="success-box">
+					<strong>Key Insight:</strong> The animation loop implementation has a far greater impact on long-term performance than shader complexity.
+				</div>
+
+				<h3>2. Minimize State in Animation Loops</h3>
+				
+				<p>Every variable you track between animation frames creates potential for memory issues and performance degradation over time.</p>
+				
+				<div class="code-comparison">
+					<div>
+						<h4>✅ Minimal State</h4>
+						<pre><code class="language-javascript">function animate() {
+    uniforms['time'].value = performance.now() / 1000;
+    renderer.render(scene, camera);
+}</code></pre>
+					</div>
+					<div>
+						<h4>❌ Excessive State</h4>
+						<pre><code class="language-javascript">function animate(timestamp) {
+    frameCount++;
+    if (timestamp - lastFpsTime >= 1000) {
+        fps = Math.round((frameCount * 1000) / 
+            (timestamp - lastFpsTime));
+        frameCount = 0;
+        lastFpsTime = timestamp;
+    }
+    
+    lastFrameTime = timestamp;
+    // More rendering code...
+}</code></pre>
+					</div>
+				</div>
+				
+				<p>The more state you track between frames, the more opportunities there are for memory leaks and performance issues, especially on memory-constrained mobile devices.</p>
+
+				<h3>3. Be Cautious with Resolution-Dependent Shaders</h3>
+				
+				<p>Passing window resolution to shaders can cause performance problems, especially on mobile devices where resolution can change during use (e.g., when address bars appear/disappear).</p>
+				
+				<div class="code-comparison">
+					<div>
+						<h4>✅ Resolution-Independent</h4>
+						<pre><code class="language-glsl">void main() {
+    vec2 p = -1.0 + 2.0 * vUv;
+    // Rest of shader using normalized coordinates
+}</code></pre>
+					</div>
+					<div>
+						<h4>❌ Resolution-Dependent</h4>
+						<pre><code class="language-glsl">uniform vec2 resolution;
+
+void main() {
+    vec2 uv = vUv;
+    float aspectRatio = resolution.x / resolution.y;
+    uv.x *= aspectRatio;
+    // Rest of shader using resolution-adjusted coordinates
+}</code></pre>
+					</div>
+				</div>
+				
+				<p>Resolution-dependent shaders require updates whenever the window size changes, which can trigger shader recompilation and cause jank, especially during scrolling on mobile devices.</p>
+
+				<h3>4. Shader Function Costs Aren't Intuitive</h3>
+				
+				<p>Not all shader functions have the same performance cost, and the differences can be surprising:</p>
+				
+				<ul>
+					<li><strong>Relatively Efficient:</strong> sin, cos, mod, floor, abs</li>
+					<li><strong>More Expensive:</strong> pow, exp, log, sqrt</li>
+					<li><strong>Very Expensive:</strong> noise functions, especially those using multiple trigonometric operations</li>
+				</ul>
+				
+				<p>A shader with many sine and cosine operations may perform better than one with fewer but more expensive operations like noise functions.</p>
+
+				<h2>Practical Optimization Techniques</h2>
+				
+				<h3>1. Use Three.js's Built-in Animation Loop</h3>
+				
+				<pre><code class="language-javascript">// In your initialization function
+renderer.setAnimationLoop(animate);
+
+function animate() {
+    uniforms['time'].value = performance.now() / 1000;
+    renderer.render(scene, camera);
+}</code></pre>
+				
+				<h3>2. Keep Shader Uniforms Simple</h3>
+				
+				<pre><code class="language-javascript">// Minimal uniforms
+uniforms = {
+    time: { value: 1.0 }
+};</code></pre>
+				
+				<h3>3. Avoid Procedural Noise in Favor of Texture-Based Approaches</h3>
+				
+				<p>Instead of computing noise in the shader, consider using pre-computed noise textures:</p>
+				
+				<pre><code class="language-javascript">// Create a noise texture once
+const noiseTexture = createNoiseTexture();
+
+// Pass it to the shader
+uniforms = {
+    time: { value: 1.0 },
+    noiseTexture: { value: noiseTexture }
+};</code></pre>
+				
+				<h3>4. Limit Pixel Ratio on High-DPI Devices</h3>
+				
+				<pre><code class="language-javascript">// Limit pixel ratio to reasonable values
+const pixelRatio = Math.min(window.devicePixelRatio, 2.0);
+renderer.setPixelRatio(pixelRatio);</code></pre>
+				
+				<h3>5. Simplify Mobile Shaders When Necessary</h3>
+				
+				<p>Consider having separate shader code paths for mobile devices:</p>
+				
+				<pre><code class="language-javascript">const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+const fragmentShader = isMobile 
+    ? document.getElementById('fragmentShaderMobile').textContent
+    : document.getElementById('fragmentShaderDesktop').textContent;</code></pre>
+
+				<h2>Conclusion: Focus on the Fundamentals</h2>
+				
+				<p>When optimizing Three.js gradients, it's easy to get caught up in shader complexity and miss the more fundamental issues that affect performance. Our testing has shown that the animation loop implementation, state management, and how you handle browser events have a far greater impact on sustained performance than minor shader optimizations.</p>
+				
+				<p>By focusing on these core aspects of your Three.js implementation, you can create beautiful, smooth gradient animations that perform well across all devices, even on lower-end mobile hardware.</p>
+				
+				<div class="success-box">
+					<strong>Remember:</strong> The most elegant code is often the most performant. When it comes to WebGL, simpler implementation patterns with fewer moving parts typically lead to better sustained performance.
+				</div>
+			</div>
+		</main>
+
+		<!-- Vertex shader script -->
+		<script id="vertexShader" type="x-shader/x-vertex">
+			varying vec2 vUv;
+
+			void main() {
+				vUv = uv;
+				gl_Position = vec4(position, 1.0);
+			}
+		</script>
+
+		<!-- Fragment shader script -->
+		<script id="fragmentShader" type="x-shader/x-fragment">
+			varying vec2 vUv;
+			uniform float time;
+
+			void main() {
+				vec2 p = -1.0 + 2.0 * vUv;
+				float a = time * 20.0;
+				
+				float d, e, f, g = 1.0 / 40.0, h, i, r, q;
+				
+				e = 400.0 * (p.x * 0.5 + 0.5);
+				f = 400.0 * (p.y * 0.5 + 0.5);
+				
+				i = 200.0 + sin(e * g + a / 150.0) * 20.0;
+				d = 200.0 + cos(f * g / 2.0) * 18.0 + cos(e * g) * 7.0;
+				r = sqrt(pow(abs(i - e), 2.0) + pow(abs(d - f), 2.0));
+				q = f / r;
+				e = (r * cos(q)) - a / 2.0;
+				f = (r * sin(q)) - a / 2.0;
+				d = sin(e * g) * 176.0 + sin(e * g) * 164.0 + r;
+				h = ((f + d) + a / 2.0) * g;
+				i = cos(h + r * p.x / 1.3) * (e + e + a) + cos(q * g * 6.0) * (r + h / 3.0);
+				h = sin(f * g) * 144.0 - sin(e * g) * 212.0 * p.x;
+				h = (h + (f - e) * q + sin(r - (a + h) / 7.0) * 10.0 + i / 4.0) * g;
+				i = mod(i / 5.6, 256.0) / 64.0;
+				if (i < 0.0) i += 4.0;
+				if (i >= 2.0) i = 4.0 - i;
+				d = r / 350.0;
+				d += sin(d * d * 8.0) * 0.52;
+				f = (sin(a * g) + 1.0) / 2.0;
+				
+				// Gold and green color palette
+				vec3 gold = vec3(f * i / 1.2, i / 1.8 + d / 10.0, i / 3.5) * d * p.x;
+				vec3 green = vec3(i / 3.0 + d / 12.0, i / 1.4 + d / 8.0, i / 4.0) * d * (1.0 - p.x);
+				
+				gl_FragColor = vec4(gold + green, 1.0);
+			}
+		</script>
+
+		<!-- Import map for three.js library -->
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "https://unpkg.com/three@0.145.0/build/three.module.js",
+					"three/addons/": "https://unpkg.com/three@0.145.0/examples/jsm/"
+				}
+			}
+		</script>
+
+		<!-- JavaScript code for the WebGL application -->
+		<script type="module">
+			// Import three.js library
+			import * as THREE from 'three';
+
+			// Global variables for the application
+			let camera, scene, renderer;
+			let uniforms;
+
+			// Initialize the application
+			init();
+
+			function init() {
+				// Get the container element for the WebGL content
+				const container = document.getElementById('container');
+
+				// Create the camera
+				camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+				// Create the scene
+				scene = new THREE.Scene();
+
+				// Create the geometry for the plane
+				const geometry = new THREE.PlaneGeometry(2, 2);
+
+				// Create the uniform variables for the shaders
+				uniforms = {
+					time: { value: 1.0 }
+				};
+
+				// Create the material for the plane
+				const material = new THREE.ShaderMaterial({
+					uniforms: uniforms,
+					vertexShader: document.getElementById('vertexShader').textContent,
+					fragmentShader: document.getElementById('fragmentShader').textContent
+				});
+
+				// Create the mesh for the plane
+				const mesh = new THREE.Mesh(geometry, material);
+
+				// Add the mesh to the scene
+				scene.add(mesh);
+
+				// Create the renderer
+				renderer = new THREE.WebGLRenderer();
+
+				// Set the pixel ratio for the renderer
+				renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
+
+				// Set the size of the renderer
+				renderer.setSize(window.innerWidth, window.innerHeight);
+
+				// Set the animation loop for the renderer
+				renderer.setAnimationLoop(animate);
+
+				// Add the renderer to the container
+				container.appendChild(renderer.domElement);
+
+				// Add event listener for window resize
+				window.addEventListener('resize', onWindowResize);
+			}
+
+			function onWindowResize() {
+				// Update the size of the renderer
+				renderer.setSize(window.innerWidth, window.innerHeight);
+			}
+
+			function animate() {
+				// Update the time uniform
+				uniforms['time'].value = performance.now() / 1000;
+
+				// Render the scene
+				renderer.render(scene, camera);
+			}
+		</script>
+		<script src="../menu.js"></script>
+		<!-- Add Prism.js for syntax highlighting -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+	</body>
+</html>
