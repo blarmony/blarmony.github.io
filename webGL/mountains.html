@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebGL Mountain Landscape</title>
+  <title>WebGL Starfield Animation</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
   <style>
     body {
@@ -14,9 +14,22 @@
     canvas {
       display: block;
     }
+    .description {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 5px;
+      color: white;
+      z-index: 1;
+    }
   </style>
 </head>
 <body>
+  <div class="description">
+    This webpage features an animated WebGL starfield background. Tiny white dots (stars) move outward from the center of the screen toward the edges, simulating a warp-speed space travel effect.
+  </div>
   <canvas id="webglCanvas"></canvas>
   <script>
     const canvas = document.getElementById('webglCanvas');
@@ -35,21 +48,23 @@
       gl.viewport(0, 0, canvas.width, canvas.height);
     });
 
-    gl.enable(gl.DEPTH_TEST);
-
     const vertexShaderSource = `
-      attribute vec3 coordinates;
-      uniform mat4 projectionMatrix;
-      uniform mat4 modelViewMatrix;
+      attribute vec2 position;
+      attribute float size;
+      attribute vec4 color;
+      varying vec4 vColor;
       void main(void) {
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(coordinates, 1.0);
+        gl_Position = vec4(position, 0.0, 1.0);
+        gl_PointSize = size;
+        vColor = color;
       }
     `;
 
     const fragmentShaderSource = `
       precision mediump float;
+      varying vec4 vColor;
       void main(void) {
-        gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+        gl_FragColor = vColor;
       }
     `;
 
@@ -69,8 +84,6 @@
     const vertexShader = createShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
     const fragmentShader = createShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
 
-    if (!vertexShader || !fragmentShader) return;
-
     const shaderProgram = gl.createProgram();
     gl.attachShader(shaderProgram, vertexShader);
     gl.attachShader(shaderProgram, fragmentShader);
@@ -83,44 +96,71 @@
 
     gl.useProgram(shaderProgram);
 
-    const coordinates = [];
-    const gridSize = 50; // Reduced size for better focus
-    const gridSpacing = 1.0; // Increased spacing for visibility
+    const maxStars = 500;
+    const stars = [];
 
-    for (let x = -gridSize; x < gridSize; x++) {
-      for (let z = -gridSize; z < gridSize; z++) {
-        coordinates.push(x * gridSpacing, Math.sin(x * 0.5) * 10.0, z * gridSpacing);
-        coordinates.push((x + 1) * gridSpacing, Math.sin((x + 1) * 0.5) * 10.0, z * gridSpacing);
+    for (let i = 0; i < maxStars; i++) {
+      stars.push({
+        position: [Math.random() * 2 - 1, Math.random() * 2 - 1],
+        speed: Math.random() * 0.01 + 0.002,
+        size: Math.random() * 2 + 1,
+        color: [1.0, 1.0, 1.0, Math.random() * 0.5 + 0.5],
+      });
+    }
+
+    const positions = new Float32Array(maxStars * 2);
+    const sizes = new Float32Array(maxStars);
+    const colors = new Float32Array(maxStars * 4);
+
+    const positionBuffer = gl.createBuffer();
+    const sizeBuffer = gl.createBuffer();
+    const colorBuffer = gl.createBuffer();
+
+    const positionLocation = gl.getAttribLocation(shaderProgram, 'position');
+    const sizeLocation = gl.getAttribLocation(shaderProgram, 'size');
+    const colorLocation = gl.getAttribLocation(shaderProgram, 'color');
+
+    gl.enableVertexAttribArray(positionLocation);
+    gl.enableVertexAttribArray(sizeLocation);
+    gl.enableVertexAttribArray(colorLocation);
+
+    function updateStars() {
+      for (let i = 0; i < maxStars; i++) {
+        stars[i].position[1] += stars[i].speed;
+        if (stars[i].position[1] > 1) {
+          stars[i].position[1] = -1;
+          stars[i].position[0] = Math.random() * 2 - 1;
+          stars[i].speed = Math.random() * 0.01 + 0.002;
+          stars[i].size = Math.random() * 2 + 1;
+          stars[i].color[3] = Math.random() * 0.5 + 0.5;
+        }
+
+        positions[i * 2] = stars[i].position[0];
+        positions[i * 2 + 1] = stars[i].position[1];
+        sizes[i] = stars[i].size;
+        colors.set(stars[i].color, i * 4);
       }
     }
 
-    const coordinateBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, coordinateBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coordinates), gl.STATIC_DRAW);
-
-    const coordinatesAttributeLocation = gl.getAttribLocation(shaderProgram, 'coordinates');
-    gl.enableVertexAttribArray(coordinatesAttributeLocation);
-    gl.vertexAttribPointer(coordinatesAttributeLocation, 3, gl.FLOAT, false, 0, 0);
-
-    const projectionMatrixLocation = gl.getUniformLocation(shaderProgram, 'projectionMatrix');
-    const modelViewMatrixLocation = gl.getUniformLocation(shaderProgram, 'modelViewMatrix');
-
-    const projectionMatrix = mat4.create();
-    mat4.perspective(projectionMatrix, Math.PI / 4, canvas.width / canvas.height, 0.1, 1000.0);
-
-    const modelViewMatrix = mat4.create();
-    mat4.lookAt(modelViewMatrix, [0, 50, 100], [0, 0, 0], [0, 1, 0]); // Adjusted for better view
-
     function render() {
-      mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -0.1]);
+      updateStars();
 
-      gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
-      gl.uniformMatrix4fv(modelViewMatrixLocation, false, modelViewMatrix);
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+      gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
-      gl.clearColor(0, 0, 0, 1); // Background color
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.STATIC_DRAW);
+      gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
 
-      gl.drawArrays(gl.LINES, 0, coordinates.length / 3); // Changed to gl.LINES
+      gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
+      gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      gl.drawArrays(gl.POINTS, 0, maxStars);
 
       requestAnimationFrame(render);
     }
