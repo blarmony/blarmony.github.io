@@ -13,6 +13,10 @@
     }
     canvas {
       display: block;
+      position: fixed;
+      left: 0; top: 0;
+      width: 100vw; height: 100vh;
+      z-index: 0;
     }
     .description {
       position: absolute;
@@ -35,137 +39,131 @@
     const canvas = document.getElementById('webglCanvas');
     const gl = canvas.getContext('webgl');
 
-    if (!gl) {
-      alert('WebGL not supported');
-    }
-
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    window.addEventListener('resize', () => {
+    function resize() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      gl.viewport(0, 0, canvas.width, canvas.height);
-    });
+      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    }
+    resize();
+    window.addEventListener('resize', resize);
 
+    // Shaders
     const vertexShaderSource = `
       attribute vec2 position;
       attribute float size;
-      attribute vec4 color;
-      varying vec4 vColor;
+      varying float vAlpha;
       void main(void) {
         gl_Position = vec4(position, 0.0, 1.0);
         gl_PointSize = size;
-        vColor = color;
+        vAlpha = (size-1.0)/3.0 + 0.3; // fakes some twinkle by size
       }
     `;
-
     const fragmentShaderSource = `
       precision mediump float;
-      varying vec4 vColor;
+      varying float vAlpha;
       void main(void) {
-        gl_FragColor = vColor;
+        float r = 0.0, delta = 0.0;
+        vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+        r = dot(cxy, cxy);
+        if(r > 1.0) discard;
+        gl_FragColor = vec4(1.0, 1.0, 1.0, vAlpha * (1.0-r));
       }
     `;
-
-    function createShader(gl, sourceCode, type) {
+    function createShader(gl, source, type) {
       const shader = gl.createShader(type);
-      gl.shaderSource(shader, sourceCode);
+      gl.shaderSource(shader, source);
       gl.compileShader(shader);
-
       if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error('Shader Compile Error:', gl.getShaderInfoLog(shader));
+        console.error(gl.getShaderInfoLog(shader));
         gl.deleteShader(shader);
         return null;
       }
       return shader;
     }
-
     const vertexShader = createShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
     const fragmentShader = createShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
 
-    const shaderProgram = gl.createProgram();
-    gl.attachShader(shaderProgram, vertexShader);
-    gl.attachShader(shaderProgram, fragmentShader);
-    gl.linkProgram(shaderProgram);
-
-    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-      console.error('Program Link Error:', gl.getProgramInfoLog(shaderProgram));
-      return;
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.error(gl.getProgramInfoLog(program));
     }
+    gl.useProgram(program);
 
-    gl.useProgram(shaderProgram);
+    // Attributes
+    const positionLoc = gl.getAttribLocation(program, 'position');
+    const sizeLoc = gl.getAttribLocation(program, 'size');
 
-    const maxStars = 500;
+    // Starfield parameters
+    const numStars = 400;
     const stars = [];
-
-    for (let i = 0; i < maxStars; i++) {
-      stars.push({
-        position: [Math.random() * 2 - 1, Math.random() * 2 - 1],
-        speed: Math.random() * 0.01 + 0.002,
-        size: Math.random() * 2 + 1,
-        color: [1.0, 1.0, 1.0, Math.random() * 0.5 + 0.5],
-      });
+    function resetStar(star) {
+      const angle = Math.random() * 2 * Math.PI;
+      const radius = Math.random() * 0.1; // Start near center
+      star.x = Math.cos(angle) * radius;
+      star.y = Math.sin(angle) * radius;
+      star.size = Math.random() * 3 + 1.5;
+      star.speed = Math.random() * 0.004 + 0.002;
+      star.angle = angle;
+      star.radius = radius;
+    }
+    for (let i = 0; i < numStars; ++i) {
+      const star = {};
+      resetStar(star);
+      stars.push(star);
     }
 
-    const positions = new Float32Array(maxStars * 2);
-    const sizes = new Float32Array(maxStars);
-    const colors = new Float32Array(maxStars * 4);
-
+    // Buffers
     const positionBuffer = gl.createBuffer();
     const sizeBuffer = gl.createBuffer();
-    const colorBuffer = gl.createBuffer();
 
-    const positionLocation = gl.getAttribLocation(shaderProgram, 'position');
-    const sizeLocation = gl.getAttribLocation(shaderProgram, 'size');
-    const colorLocation = gl.getAttribLocation(shaderProgram, 'color');
-
-    gl.enableVertexAttribArray(positionLocation);
-    gl.enableVertexAttribArray(sizeLocation);
-    gl.enableVertexAttribArray(colorLocation);
-
-    function updateStars() {
-      for (let i = 0; i < maxStars; i++) {
-        stars[i].position[1] += stars[i].speed;
-        if (stars[i].position[1] > 1) {
-          stars[i].position[1] = -1;
-          stars[i].position[0] = Math.random() * 2 - 1;
-          stars[i].speed = Math.random() * 0.01 + 0.002;
-          stars[i].size = Math.random() * 2 + 1;
-          stars[i].color[3] = Math.random() * 0.5 + 0.5;
+    function updateAndDrawStars() {
+      // Animate stars
+      const aspect = canvas.width / canvas.height;
+      for (let i = 0; i < numStars; ++i) {
+        const star = stars[i];
+        star.radius += star.speed;
+        if (star.radius > 1.2) { // If off screen, reset
+          resetStar(star);
+        } else {
+          star.x = Math.cos(star.angle) * star.radius;
+          star.y = Math.sin(star.angle) * star.radius;
         }
-
-        positions[i * 2] = stars[i].position[0];
-        positions[i * 2 + 1] = stars[i].position[1];
-        sizes[i] = stars[i].size;
-        colors.set(stars[i].color, i * 4);
       }
-    }
-
-    function render() {
-      updateStars();
-
+      // Fill attribute arrays
+      const positions = new Float32Array(numStars * 2);
+      const sizes = new Float32Array(numStars);
+      for (let i = 0; i < numStars; ++i) {
+        // Correct for aspect ratio
+        positions[i * 2] = stars[i].x / aspect;
+        positions[i * 2 + 1] = stars[i].y;
+        sizes[i] = stars[i].size;
+      }
+      // Set position attribute
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-      gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-
+      gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
+      gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(positionLoc);
+      // Set size attribute
       gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.STATIC_DRAW);
-      gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
+      gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.DYNAMIC_DRAW);
+      gl.vertexAttribPointer(sizeLoc, 1, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(sizeLoc);
 
-      gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
-      gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
-
+      // Draw
       gl.clearColor(0, 0, 0, 1);
       gl.clear(gl.COLOR_BUFFER_BIT);
-
-      gl.drawArrays(gl.POINTS, 0, maxStars);
-
-      requestAnimationFrame(render);
+      gl.drawArrays(gl.POINTS, 0, numStars);
     }
 
-    render();
+    function animate() {
+      updateAndDrawStars();
+      requestAnimationFrame(animate);
+    }
+
+    animate();
   </script>
 </body>
 </html>
