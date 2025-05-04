@@ -35,7 +35,7 @@
       gl.viewport(0, 0, canvas.width, canvas.height);
     });
 
-    gl.enable(gl.DEPTH_TEST); // Enable depth testing
+    gl.enable(gl.DEPTH_TEST);
 
     const vertexShaderSource = `
       attribute vec3 coordinates;
@@ -84,13 +84,13 @@
     gl.useProgram(shaderProgram);
 
     const coordinates = [];
-    const gridSize = 100;
-    const gridSpacing = 0.2;
+    const gridSize = 50; // Reduced size for better focus
+    const gridSpacing = 1.0; // Increased spacing for visibility
 
     for (let x = -gridSize; x < gridSize; x++) {
       for (let z = -gridSize; z < gridSize; z++) {
-        coordinates.push(x * gridSpacing, Math.sin(x) * 2.0, z * gridSpacing);
-        coordinates.push((x + 1) * gridSpacing, Math.sin(x + 1) * 2.0, z * gridSpacing);
+        coordinates.push(x * gridSpacing, Math.sin(x * 0.5) * 10.0, z * gridSpacing);
+        coordinates.push((x + 1) * gridSpacing, Math.sin((x + 1) * 0.5) * 10.0, z * gridSpacing);
       }
     }
 
@@ -109,7 +109,7 @@
     mat4.perspective(projectionMatrix, Math.PI / 4, canvas.width / canvas.height, 0.1, 1000.0);
 
     const modelViewMatrix = mat4.create();
-    mat4.lookAt(modelViewMatrix, [0, 10, 20], [0, 0, 0], [0, 1, 0]);
+    mat4.lookAt(modelViewMatrix, [0, 50, 100], [0, 0, 0], [0, 1, 0]); // Adjusted for better view
 
     function render() {
       mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -0.1]);
@@ -117,10 +117,10 @@
       gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
       gl.uniformMatrix4fv(modelViewMatrixLocation, false, modelViewMatrix);
 
-      gl.clearColor(0, 0, 0, 1);
+      gl.clearColor(0, 0, 0, 1); // Background color
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      gl.drawArrays(gl.LINE_STRIP, 0, coordinates.length / 3);
+      gl.drawArrays(gl.LINES, 0, coordinates.length / 3); // Changed to gl.LINES
 
       requestAnimationFrame(render);
     }
