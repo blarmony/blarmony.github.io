@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pacific Dusk Through the Lens</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #1a1a1a;
+            font-family: 'Georgia', serif;
+        }
+        
+        #description {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.9);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.6;
+            z-index: 1000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="description">
+        Through the telephoto lens, the Pacific Ocean reveals its layers at dusk. 
+        Distant swells move in parallel bands, their motion highlighted by the fading light. 
+        Each wave set moves at its own rhythm - some slow and majestic, others quick and subtle, 
+        creating a hypnotic dance of light and shadow across the water's surface.
+    </div>
+    <canvas id="waveCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('waveCanvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            alert('Unable to initialize WebGL. Your browser may not support it.');
+            return;
+        }
+
+        // Vertex shader program
+        const vsSource = `
+            attribute vec4 aPosition;
+            varying vec2 vTexCoord;
+            
+            void main() {
+                gl_Position = aPosition;
+                vTexCoord = aPosition.xy * 0.5 + 0.5;
+            }
+        `;
+
+        // Fragment shader program
+        const fsSource = `
+            precision highp float;
+            
+            varying vec2 vTexCoord;
+            uniform float uTime;
+            uniform vec2 uResolution;
+            
+            vec3 duskColor(float y) {
+                // Create a rich dusk palette
+                vec3 horizon = vec3(0.95, 0.6, 0.4);    // Warm orange
+                vec3 zenith = vec3(0.2, 0.3, 0.5);      // Deep blue
+                vec3 water = vec3(0.1, 0.15, 0.25);     // Deep water color
+                
+                float horizonPos = 0.6;
+                float horizonWidth = 0.1;
+                
+                if (y < 0.5) {
+                    return mix(water, horizon, smoothstep(0.3, 0.5, y));
+                } else {
+                    return mix(horizon, zenith, smoothstep(horizonPos, horizonPos + horizonWidth, y));
+                }
+            }
+            
+            float wave(vec2 pos, float freq, float speed, float amplitude, float time) {
+                // Create more natural wave motion
+                float phase = time * speed;
+                float distortion = sin(pos.x * 0.1 + time * 0.1) * 0.1;
+                return sin(pos.x * freq + phase + distortion) * amplitude;
+            }
+            
+            void main() {
+                vec2 uv = vTexCoord;
+                vec2 aspectCorrectedUV = uv * uResolution / min(uResolution.x, uResolution.y);
+                
+                // Layer multiple waves
+                float displacement = 0.0;
+                
+                // Distant waves (smaller, faster)
+                displacement += wave(aspectCorrectedUV, 8.0, 1.2, 0.01, uTime);
+                displacement += wave(aspectCorrectedUV, 12.0, 0.8, 0.008, uTime);
+                
+                // Mid-distance waves
+                displacement += wave(aspectCorrectedUV, 5.0, 0.6, 0.015, uTime);
+                displacement += wave(aspectCorrectedUV, 6.0, 0.5, 0.012, uTime);
+                
+                // Closer waves (larger, slower)
+                displacement += wave(aspectCorrectedUV, 3.0, 0.3, 0.02, uTime);
+                
+                // Adjust UV for final color sampling
+                vec2 distortedUV = vec2(uv.x, uv.y + displacement);
+                
+                // Apply dusk coloring
+                vec3 color = duskColor(distortedUV.y);
+                
+                // Add subtle sparkle to wave peaks
+                float sparkle = max(0.0, sin(distortedUV.y * 100.0 + uTime * 2.0)) * 0.05;
+                color += vec3(sparkle);
+                
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        // Initialize shaders
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('Shader compilation error:', gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+        // Create shader program
+        const shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            console.error('Program linking error:', gl.getProgramInfoLog(shaderProgram));
+            return;
+        }
+
+        // Set up vertex buffer
+        const positions = new Float32Array([
+            -1.0, -1.0,
+             1.0, -1.0,
+            -1.0,  1.0,
+            -1.0,  1.0,
+             1.0, -1.0,
+             1.0,  1.0
+        ]);
+
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+        // Get attribute and uniform locations
+        const positionLocation = gl.getAttribLocation(shaderProgram, 'aPosition');
+        const timeLocation = gl.getUniformLocation(shaderProgram, 'uTime');
+        const resolutionLocation = gl.getUniformLocation(shaderProgram, 'uResolution');
+
+        // Resize handler
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Animation loop
+        function render(time) {
+            time *= 0.001; // Convert to seconds
+
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.useProgram(shaderProgram);
+
+            gl.enableVertexAttribArray(positionLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+            gl.uniform1f(timeLocation, time);
+            gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+            requestAnimationFrame(render);
+        }
+
+        requestAnimationFrame(render);
+    </script>
+</body>
+</html>
