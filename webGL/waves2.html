@@ -25,75 +25,72 @@
     Each row uses a unique color palette (green, turquoise, blue) and is accented by occasional yellow and orange highlights on the wave crests, creating a soothing oceanic background.
   </div>
   <script>
-    // Get canvas and WebGL context
+    // Resize and aspect
     const canvas = document.getElementById('wavesCanvas');
     const gl = canvas.getContext('webgl');
-    let width = 0, height = 0, aspect = 1;
-
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width;
-      canvas.height = height;
-      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-      aspect = width / height;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      gl.viewport(0, 0, canvas.width, canvas.height);
     }
     window.addEventListener('resize', resize);
     resize();
 
-    // --- GLSL Shaders ---
-    const vertexShaderSource = `
-      attribute float aX;
+    // Shader helpers
+    function compileShader(gl, src, type) {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(s));
+        throw new Error('Shader compile failed');
+      }
+      return s;
+    }
+
+    // Vertex Shader
+    const vshSrc = `
+      attribute vec2 aPos;
       attribute float aRow;
       uniform float uTime;
       uniform float uAspect;
       varying float vY;
       varying float vRow;
       varying float vCrest;
-
       void main() {
-        float row = aRow;
-        float x = aX;
+        float x = aPos.x;
         float y = 0.0;
-        float baseY = -0.7 + row * 0.7; // -0.7, 0.0, +0.7
-
-        // Row-specific double sine
-        if(row < 0.5) {
-          y = baseY
-            + 0.10 * sin(1.7 * x + uTime * 0.55)
-            + 0.06 * sin(5.2 * x - uTime * 0.75);
-        } else if(row < 1.5) {
-          y = baseY
-            + 0.14 * sin(2.2 * x + uTime * 0.45)
-            + 0.09 * sin(7.0 * x - uTime * 0.52);
-        } else {
-          y = baseY
-            + 0.11 * sin(2.6 * x + uTime * 0.33)
-            + 0.07 * sin(4.8 * x - uTime * 0.66);
-        }
-        float crest = (sin(8.0 * x + uTime * 0.7) + 1.0) * 0.5;
+        float baseY = -0.7 + aRow * 0.7; // 3 rows: -0.7, 0.0, +0.7
+        // Double sine for each row
+        if(aRow < 0.5)
+          y = baseY + 0.10*sin(1.7*x + uTime*0.55) + 0.06*sin(5.2*x - uTime*0.75);
+        else if(aRow < 1.5)
+          y = baseY + 0.14*sin(2.2*x + uTime*0.45) + 0.09*sin(7.0*x - uTime*0.52);
+        else
+          y = baseY + 0.11*sin(2.6*x + uTime*0.33) + 0.07*sin(4.8*x - uTime*0.66);
+        float crest = (sin(8.0*x + uTime*0.7) + 1.0) * 0.5;
         vY = y;
-        vRow = row;
+        vRow = aRow;
         vCrest = crest;
         gl_Position = vec4(x * uAspect, y, 0.0, 1.0);
       }
     `;
-    const fragmentShaderSource = `
+    // Fragment Shader
+    const fshSrc = `
       precision mediump float;
       varying float vY;
       varying float vRow;
       varying float vCrest;
       void main() {
-        float alpha = 0.83;
+        float alpha = 0.86;
         vec3 color;
-        if(vRow < 0.5) {
-          color = mix(vec3(0.11, 0.82, 0.3), vec3(0.16, 0.92, 0.45), 0.5 + 0.5 * vY);
-        } else if(vRow < 1.5) {
-          color = mix(vec3(0.08, 0.85, 0.82), vec3(0.15, 0.96, 0.91), 0.5 + 0.5 * vY);
-        } else {
-          color = mix(vec3(0.18, 0.45, 0.92), vec3(0.38, 0.72, 1.0), 0.5 + 0.5 * vY);
-        }
-        // Highlight crests with yellow/orange occasionally
+        if(vRow < 0.5)
+          color = mix(vec3(0.13, 0.88, 0.38), vec3(0.16, 0.98, 0.52), 0.5 + 0.5 * vY);
+        else if(vRow < 1.5)
+          color = mix(vec3(0.10, 0.85, 0.82), vec3(0.22, 0.96, 0.91), 0.5 + 0.5 * vY);
+        else
+          color = mix(vec3(0.22, 0.55, 1.0), vec3(0.24, 0.88, 1.0), 0.5 + 0.5 * vY);
+        // Occasional crest highlight
         float crestHighlight = smoothstep(0.82, 1.0, vCrest);
         if(crestHighlight > 0.0 && mod(vY * 10.0 + vRow * 2.0, 2.0) > 1.6) {
           vec3 highlight = mix(vec3(1.0, 0.92, 0.36), vec3(1.0, 0.69, 0.22), step(0.5, vRow));
@@ -104,20 +101,9 @@
       }
     `;
 
-    // --- Shader Utilities ---
-    function compileShader(gl, src, type) {
-      const sh = gl.createShader(type);
-      gl.shaderSource(sh, src);
-      gl.compileShader(sh);
-      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-        console.error(gl.getShaderInfoLog(sh));
-        throw new Error('Shader compile error');
-      }
-      return sh;
-    }
-    const vsh = compileShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
-    const fsh = compileShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
-
+    // Compile and link shaders
+    const vsh = compileShader(gl, vshSrc, gl.VERTEX_SHADER);
+    const fsh = compileShader(gl, fshSrc, gl.FRAGMENT_SHADER);
     const program = gl.createProgram();
     gl.attachShader(program, vsh);
     gl.attachShader(program, fsh);
@@ -128,69 +114,62 @@
     }
     gl.useProgram(program);
 
-    // --- Attributes & Uniforms ---
-    const aX = gl.getAttribLocation(program, 'aX');
+    // Attribute/uniform locations
+    const aPos = gl.getAttribLocation(program, 'aPos');
     const aRow = gl.getAttribLocation(program, 'aRow');
     const uTime = gl.getUniformLocation(program, 'uTime');
     const uAspect = gl.getUniformLocation(program, 'uAspect');
 
-    // --- Geometry ---
-    const slices = 240, rows = 3;
-    const xArr = [], rowArr = [], idxArr = [];
+    // Build mesh: 3 strips, each a triangle strip
+    const slices = 180, rows = 3;
+    const vtx = [], rowData = [];
     for(let row=0; row<rows; ++row) {
       for(let i=0; i<=slices; ++i) {
         let x = -1 + 2*i/slices;
-        xArr.push(x, x);
-        rowArr.push(row, row);
+        vtx.push(x, -1); rowData.push(row);
+        vtx.push(x, 1);  rowData.push(row);
       }
     }
-    // Indices for strips
-    for(let row=0; row<rows; ++row) {
-      let offset = row*(slices+1)*2;
-      for(let i=0; i<slices; ++i) {
-        idxArr.push(offset+i*2, offset+i*2+1, offset+i*2+2);
-        idxArr.push(offset+i*2+1, offset+i*2+2, offset+i*2+3);
-      }
-    }
+    const vtxA = new Float32Array(vtx);
+    const rowA = new Float32Array(rowData);
 
-    const xBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, xBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(xArr), gl.STATIC_DRAW);
+    // Buffers
+    const vtxBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vtxBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, vtxA, gl.STATIC_DRAW);
 
-    const rowBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, rowBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rowArr), gl.STATIC_DRAW);
+    const rowBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, rowBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, rowA, gl.STATIC_DRAW);
 
-    const idxBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idxArr), gl.STATIC_DRAW);
-
-    // --- Draw Loop ---
-    function render(t) {
+    // Draw loop
+    function draw(t) {
       gl.clearColor(0.07, 0.10, 0.16, 1);
       gl.clear(gl.COLOR_BUFFER_BIT);
 
       gl.useProgram(program);
       gl.uniform1f(uTime, t * 0.001);
-      gl.uniform1f(uAspect, aspect);
+      gl.uniform1f(uAspect, canvas.width / canvas.height);
 
-      // Attribute aX
-      gl.enableVertexAttribArray(aX);
-      gl.bindBuffer(gl.ARRAY_BUFFER, xBuffer);
-      gl.vertexAttribPointer(aX, 1, gl.FLOAT, false, 0, 0);
+      // aPos attribute
+      gl.enableVertexAttribArray(aPos);
+      gl.bindBuffer(gl.ARRAY_BUFFER, vtxBuf);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
-      // Attribute aRow
+      // aRow attribute
       gl.enableVertexAttribArray(aRow);
-      gl.bindBuffer(gl.ARRAY_BUFFER, rowBuffer);
+      gl.bindBuffer(gl.ARRAY_BUFFER, rowBuf);
       gl.vertexAttribPointer(aRow, 1, gl.FLOAT, false, 0, 0);
 
-      // Indices
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuffer);
-      gl.drawElements(gl.TRIANGLES, idxArr.length, gl.UNSIGNED_SHORT, 0);
+      // Draw each row as a strip (2*(slices+1) vertices per row)
+      const vertsPerRow = (slices+1)*2;
+      for(let row=0; row<rows; ++row) {
+        gl.drawArrays(gl.TRIANGLE_STRIP, row*vertsPerRow, vertsPerRow);
+      }
 
-      requestAnimationFrame(render);
+      requestAnimationFrame(draw);
     }
-    render(0);
+    draw(0);
   </script>
 </body>
 </html>
