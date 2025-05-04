@@ -4,51 +4,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebGL Mountain Landscape</title>
-  <!-- Include gl-matrix library for matrix operations -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
   <style>
     body {
       margin: 0;
       overflow: hidden;
-      font-family: Arial, sans-serif;
-      color: white;
       background: black;
     }
     canvas {
       display: block;
     }
-    .description {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 10px;
-      border-radius: 5px;
-    }
   </style>
 </head>
 <body>
-  <div class="description">
-    This webpage features an animated WebGL background of a vast mountainous landscape, defined by green lines. The camera flies over the terrain, looking down, with the far horizon near the top of the viewport.
-  </div>
   <canvas id="webglCanvas"></canvas>
   <script>
     const canvas = document.getElementById('webglCanvas');
     const gl = canvas.getContext('webgl');
 
     if (!gl) {
-      alert('WebGL not supported, please use a different browser.');
+      alert('WebGL not supported');
     }
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // Resize the canvas on window resize
     window.addEventListener('resize', () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       gl.viewport(0, 0, canvas.width, canvas.height);
     });
+
+    gl.enable(gl.DEPTH_TEST); // Enable depth testing
 
     const vertexShaderSource = `
       attribute vec3 coordinates;
@@ -72,7 +59,7 @@
       gl.compileShader(shader);
 
       if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error(gl.getShaderInfoLog(shader));
+        console.error('Shader Compile Error:', gl.getShaderInfoLog(shader));
         gl.deleteShader(shader);
         return null;
       }
@@ -82,13 +69,15 @@
     const vertexShader = createShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
     const fragmentShader = createShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
 
+    if (!vertexShader || !fragmentShader) return;
+
     const shaderProgram = gl.createProgram();
     gl.attachShader(shaderProgram, vertexShader);
     gl.attachShader(shaderProgram, fragmentShader);
     gl.linkProgram(shaderProgram);
 
     if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-      console.error(gl.getProgramInfoLog(shaderProgram));
+      console.error('Program Link Error:', gl.getProgramInfoLog(shaderProgram));
       return;
     }
 
@@ -100,8 +89,8 @@
 
     for (let x = -gridSize; x < gridSize; x++) {
       for (let z = -gridSize; z < gridSize; z++) {
-        coordinates.push(x * gridSpacing, Math.sin(x) * 0.5, z * gridSpacing);
-        coordinates.push((x + 1) * gridSpacing, Math.sin(x + 1) * 0.5, z * gridSpacing);
+        coordinates.push(x * gridSpacing, Math.sin(x) * 2.0, z * gridSpacing);
+        coordinates.push((x + 1) * gridSpacing, Math.sin(x + 1) * 2.0, z * gridSpacing);
       }
     }
 
@@ -120,10 +109,10 @@
     mat4.perspective(projectionMatrix, Math.PI / 4, canvas.width / canvas.height, 0.1, 1000.0);
 
     const modelViewMatrix = mat4.create();
-    mat4.lookAt(modelViewMatrix, [0, 5, 10], [0, 0, 0], [0, 1, 0]);
+    mat4.lookAt(modelViewMatrix, [0, 10, 20], [0, 0, 0], [0, 1, 0]);
 
     function render() {
-      mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -0.1]); // Move forward
+      mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -0.1]);
 
       gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
       gl.uniformMatrix4fv(modelViewMatrixLocation, false, modelViewMatrix);
@@ -131,7 +120,7 @@
       gl.clearColor(0, 0, 0, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      gl.drawArrays(gl.LINES, 0, coordinates.length / 3);
+      gl.drawArrays(gl.LINE_STRIP, 0, coordinates.length / 3);
 
       requestAnimationFrame(render);
     }
