@@ -41,10 +41,26 @@
     const canvas = document.getElementById('webglCanvas');
     const gl = canvas.getContext('webgl');
 
+    // Aspect ratio is only recalculated on resize for efficiency
+    let aspect = 1, scaleX = 1, scaleY = 1;
+    function updateAspect() {
+      aspect = canvas.width / canvas.height;
+      if (aspect > 1) {
+        // Landscape: expand X
+        scaleX = aspect;
+        scaleY = 1;
+      } else {
+        // Portrait: expand Y
+        scaleX = 1;
+        scaleY = 1 / aspect;
+      }
+    }
+
     function resize() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+      updateAspect();
     }
     resize();
     window.addEventListener('resize', resize);
@@ -69,7 +85,6 @@
         vec2 cxy = 2.0 * gl_PointCoord - 1.0;
         r = dot(cxy, cxy);
         if(r > 1.0) discard;
-        // Subtle radial fade for streaks
         float alpha = 1.0 - r;
         gl_FragColor = vec4(vColor, alpha);
       }
@@ -104,10 +119,8 @@
 
     // Starfield parameters
     const numStars = 350;
-    const streakLength = 10; // How long each streak is (number of segments)
-    const aspect = () => canvas.width / canvas.height;
+    const streakLength = 10;
 
-    // Each star will keep a short trail of its previous positions for the streak effect
     function randomColor() {
       const palettes = [
         [1.0, 0.9, 0.8], // white-yellow
@@ -121,11 +134,10 @@
     function resetStar(star) {
       const angle = Math.random() * 2 * Math.PI;
       star.angle = angle;
-      star.radius = Math.random() * 0.05; // Start near center
+      star.radius = Math.random() * 0.05;
       star.size = Math.random() * 2 + 1.5 + star.radius * 4;
       star.baseSpeed = Math.random() * 0.015 + 0.006;
       star.color = randomColor();
-      // Trail: streakLength previous radii
       star.trail = [];
       for (let j = 0; j < streakLength; ++j) {
         star.trail[j] = star.radius - j * 0.01;
@@ -144,59 +156,45 @@
     const colorBuffer = gl.createBuffer();
 
     function updateAndDrawStars() {
-      const asp = aspect();
-      // Each streak is a sequence of points, so we draw numStars * streakLength points
       const positions = new Float32Array(numStars * streakLength * 2);
       const sizes = new Float32Array(numStars * streakLength);
       const colors = new Float32Array(numStars * streakLength * 3);
 
       for (let i = 0; i < numStars; ++i) {
         const star = stars[i];
-        // Calculate acceleration: speed increases with distance!
         star.radius += star.baseSpeed * (0.2 + 2.5 * star.radius);
-
-        // Update trail: push new radius at front, pop old one
         star.trail.unshift(star.radius);
         if (star.trail.length > streakLength) star.trail.pop();
-
-        // Reset if out of bounds (with a slight margin)
         if (star.radius > 1.15) {
           resetStar(star);
         }
 
-        // For each streak segment, calculate its position/color/size (fades out)
         for (let j = 0; j < streakLength; ++j) {
           const r = star.trail[j];
-          const fade = 1.0 - j / streakLength; // fade out
+          const fade = 1.0 - j / streakLength;
           const idx = (i * streakLength + j);
-          // Correct for aspect
-          positions[idx * 2] = Math.cos(star.angle) * r / asp;
-          positions[idx * 2 + 1] = Math.sin(star.angle) * r;
-          // Size: head is sharp, trail is smaller
+          // Use cached scaleX and scaleY to fill viewport in all aspects
+          positions[idx * 2] = Math.cos(star.angle) * r * scaleX;
+          positions[idx * 2 + 1] = Math.sin(star.angle) * r * scaleY;
           sizes[idx] = Math.max(1.0, star.size * fade * 0.9 + 0.7);
-          // Color: trail is dimmer, a bit bluish at the tail for effect
           colors[idx * 3] = star.color[0] * fade + 0.2 * (1-fade);
           colors[idx * 3 + 1] = star.color[1] * fade + 0.2 * (1-fade);
           colors[idx * 3 + 2] = star.color[2] * fade + 0.7 * (1-fade);
         }
       }
-      // Set position attribute
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
       gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
       gl.enableVertexAttribArray(positionLoc);
-      // Set size attribute
       gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.DYNAMIC_DRAW);
       gl.vertexAttribPointer(sizeLoc, 1, gl.FLOAT, false, 0, 0);
       gl.enableVertexAttribArray(sizeLoc);
-      // Set color attribute
       gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, colors, gl.DYNAMIC_DRAW);
       gl.vertexAttribPointer(colorLoc, 3, gl.FLOAT, false, 0, 0);
       gl.enableVertexAttribArray(colorLoc);
 
-      // Clear and draw
       gl.clearColor(0, 0, 0, 1);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.POINTS, 0, numStars * streakLength);
