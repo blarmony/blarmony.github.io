@@ -41,18 +41,20 @@
   <script>
     const canvas = document.getElementById('wavesCanvas');
     const gl = canvas.getContext('webgl');
-    let width = 0, height = 0;
+    let width = 0, height = 0, aspect = 1;
+
     function resize() {
       width = window.innerWidth;
       height = window.innerHeight;
       canvas.width = width;
       canvas.height = height;
       gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+      aspect = width / height;
     }
     window.addEventListener('resize', resize);
     resize();
 
-    // Vertex Shader: builds up three rows of double waves
+    // Vertex Shader
     const vertexShaderSource = `
       attribute vec2 aPosition;
       attribute float aRow;
@@ -95,7 +97,7 @@
       }
     `;
 
-    // Fragment Shader: Color by row, crest = highlight
+    // Fragment Shader
     const fragmentShaderSource = `
       precision mediump float;
       varying float vY;
@@ -135,6 +137,7 @@
       gl.shaderSource(shader, source);
       gl.compileShader(shader);
       if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error('Shader compile error:', gl.getShaderInfoLog(shader));
         throw new Error('Shader compile failed: ' + gl.getShaderInfoLog(shader));
       }
       return shader;
@@ -148,6 +151,7 @@
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.error('Program link error:', gl.getProgramInfoLog(program));
       throw new Error('Program link failed: ' + gl.getProgramInfoLog(program));
     }
     gl.useProgram(program);
@@ -163,14 +167,13 @@
     const vertices = [];
     const rowIDs = [];
     for (let row = 0; row < rows; ++row) {
-      const rowY = row; // 0,1,2
       for (let x = 0; x <= slices; ++x) {
         const xx = -1 + 2 * x / slices;
         // Each strip consists of a bottom and a top vertex per x
         vertices.push(xx, -1);
-        rowIDs.push(rowY);
+        rowIDs.push(row);
         vertices.push(xx, 1);
-        rowIDs.push(rowY);
+        rowIDs.push(row);
       }
     }
     const vertexArray = new Float32Array(vertices);
@@ -185,14 +188,13 @@
     gl.bindBuffer(gl.ARRAY_BUFFER, rowBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, rowArray, gl.STATIC_DRAW);
 
-    // Animation loop
     function render(time) {
       gl.clearColor(0.07, 0.10, 0.16, 1);
       gl.clear(gl.COLOR_BUFFER_BIT);
 
       gl.useProgram(program);
       gl.uniform1f(uTime, time * 0.001);
-      gl.uniform1f(uAspect, width / height);
+      gl.uniform1f(uAspect, aspect);
 
       // Setup attribute pointers for each row strip
       gl.enableVertexAttribArray(aPosition);
