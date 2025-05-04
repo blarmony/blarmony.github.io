@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- Head section remains the same -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pacific Dusk Through the Lens</title>
     <style>
+        /* Styles remain the same */
         body {
             margin: 0;
             overflow: hidden;
@@ -51,7 +53,7 @@
             return;
         }
 
-        // Vertex shader program
+        // Vertex shader program remains the same
         const vsSource = `
             attribute vec4 aPosition;
             varying vec2 vTexCoord;
@@ -62,7 +64,7 @@
             }
         `;
 
-        // Fragment shader program
+        // Modified fragment shader
         const fsSource = `
             precision highp float;
             
@@ -71,7 +73,6 @@
             uniform vec2 uResolution;
             
             vec3 duskColor(float y) {
-                // Create a rich dusk palette
                 vec3 horizon = vec3(0.95, 0.6, 0.4);    // Warm orange
                 vec3 zenith = vec3(0.2, 0.3, 0.5);      // Deep blue
                 vec3 water = vec3(0.1, 0.15, 0.25);     // Deep water color
@@ -87,45 +88,42 @@
             }
             
             float wave(vec2 pos, float freq, float speed, float amplitude, float time) {
-                // Create more natural wave motion
                 float phase = time * speed;
-                float distortion = sin(pos.x * 0.1 + time * 0.1) * 0.1;
-                return sin(pos.x * freq + phase + distortion) * amplitude;
+                float distortion = sin(pos.x * 0.2 + time * 0.1) * 0.2;
+                return sin(pos.x * freq + phase + distortion) * amplitude * pos.y;
             }
             
             void main() {
                 vec2 uv = vTexCoord;
                 vec2 aspectCorrectedUV = uv * uResolution / min(uResolution.x, uResolution.y);
                 
-                // Layer multiple waves
                 float displacement = 0.0;
                 
+                // Increased amplitudes and adjusted frequencies
                 // Distant waves (smaller, faster)
-                displacement += wave(aspectCorrectedUV, 8.0, 1.2, 0.01, uTime);
-                displacement += wave(aspectCorrectedUV, 12.0, 0.8, 0.008, uTime);
+                displacement += wave(aspectCorrectedUV, 4.0, 1.5, 0.04, uTime);
+                displacement += wave(aspectCorrectedUV, 6.0, 1.2, 0.03, uTime);
                 
                 // Mid-distance waves
-                displacement += wave(aspectCorrectedUV, 5.0, 0.6, 0.015, uTime);
-                displacement += wave(aspectCorrectedUV, 6.0, 0.5, 0.012, uTime);
+                displacement += wave(aspectCorrectedUV, 2.5, 0.8, 0.06, uTime);
+                displacement += wave(aspectCorrectedUV, 3.0, 0.6, 0.05, uTime);
                 
                 // Closer waves (larger, slower)
-                displacement += wave(aspectCorrectedUV, 3.0, 0.3, 0.02, uTime);
+                displacement += wave(aspectCorrectedUV, 1.5, 0.4, 0.08, uTime);
                 
-                // Adjust UV for final color sampling
                 vec2 distortedUV = vec2(uv.x, uv.y + displacement);
                 
-                // Apply dusk coloring
                 vec3 color = duskColor(distortedUV.y);
                 
-                // Add subtle sparkle to wave peaks
-                float sparkle = max(0.0, sin(distortedUV.y * 100.0 + uTime * 2.0)) * 0.05;
+                // Increased sparkle effect
+                float sparkle = max(0.0, sin(distortedUV.y * 100.0 + uTime * 2.0)) * 0.08;
                 color += vec3(sparkle);
                 
                 gl_FragColor = vec4(color, 1.0);
             }
         `;
 
-        // Initialize shaders
+        // Rest of the JavaScript code remains the same
         function createShader(gl, type, source) {
             const shader = gl.createShader(type);
             gl.shaderSource(shader, source);
@@ -142,7 +140,6 @@
         const vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
         const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
 
-        // Create shader program
         const shaderProgram = gl.createProgram();
         gl.attachShader(shaderProgram, vertexShader);
         gl.attachShader(shaderProgram, fragmentShader);
@@ -153,7 +150,6 @@
             return;
         }
 
-        // Set up vertex buffer
         const positions = new Float32Array([
             -1.0, -1.0,
              1.0, -1.0,
@@ -167,12 +163,10 @@
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
 
-        // Get attribute and uniform locations
         const positionLocation = gl.getAttribLocation(shaderProgram, 'aPosition');
         const timeLocation = gl.getUniformLocation(shaderProgram, 'uTime');
         const resolutionLocation = gl.getUniformLocation(shaderProgram, 'uResolution');
 
-        // Resize handler
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -182,9 +176,8 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // Animation loop
         function render(time) {
-            time *= 0.001; // Convert to seconds
+            time *= 0.001;
 
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
             gl.clear(gl.COLOR_BUFFER_BIT);
