@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebGL Starfield Animation</title>
+  <title>WebGL Starfield Warp-Speed Animation</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
   <style>
     body {
@@ -27,12 +27,14 @@
       border-radius: 5px;
       color: white;
       z-index: 1;
+      font-size: 1.1em;
     }
   </style>
 </head>
 <body>
   <div class="description">
-    This webpage features an animated WebGL starfield background. Tiny white dots (stars) move outward from the center of the screen toward the edges, simulating a warp-speed space travel effect.
+    This webpage features an animated WebGL starfield background with a warp-speed effect. 
+    Stars accelerate as they move outward from the center, leaving dynamic colored streaks behind them to enhance the sensation of speed.
   </div>
   <canvas id="webglCanvas"></canvas>
   <script>
@@ -51,22 +53,25 @@
     const vertexShaderSource = `
       attribute vec2 position;
       attribute float size;
-      varying float vAlpha;
+      attribute vec3 color;
+      varying vec3 vColor;
       void main(void) {
         gl_Position = vec4(position, 0.0, 1.0);
         gl_PointSize = size;
-        vAlpha = (size-1.0)/3.0 + 0.3; // fakes some twinkle by size
+        vColor = color;
       }
     `;
     const fragmentShaderSource = `
       precision mediump float;
-      varying float vAlpha;
+      varying vec3 vColor;
       void main(void) {
-        float r = 0.0, delta = 0.0;
+        float r = 0.0;
         vec2 cxy = 2.0 * gl_PointCoord - 1.0;
         r = dot(cxy, cxy);
         if(r > 1.0) discard;
-        gl_FragColor = vec4(1.0, 1.0, 1.0, vAlpha * (1.0-r));
+        // Subtle radial fade for streaks
+        float alpha = 1.0 - r;
+        gl_FragColor = vec4(vColor, alpha);
       }
     `;
     function createShader(gl, source, type) {
@@ -95,51 +100,85 @@
     // Attributes
     const positionLoc = gl.getAttribLocation(program, 'position');
     const sizeLoc = gl.getAttribLocation(program, 'size');
+    const colorLoc = gl.getAttribLocation(program, 'color');
 
     // Starfield parameters
-    const numStars = 400;
-    const stars = [];
+    const numStars = 350;
+    const streakLength = 10; // How long each streak is (number of segments)
+    const aspect = () => canvas.width / canvas.height;
+
+    // Each star will keep a short trail of its previous positions for the streak effect
+    function randomColor() {
+      const palettes = [
+        [1.0, 0.9, 0.8], // white-yellow
+        [0.7, 0.8, 1.0], // blue-white
+        [1.0, 0.7, 0.8], // pinkish
+        [0.7, 1.0, 0.8], // teal
+        [1.0, 1.0, 0.7]  // yellowish
+      ];
+      return palettes[Math.floor(Math.random() * palettes.length)];
+    }
     function resetStar(star) {
       const angle = Math.random() * 2 * Math.PI;
-      const radius = Math.random() * 0.1; // Start near center
-      star.x = Math.cos(angle) * radius;
-      star.y = Math.sin(angle) * radius;
-      star.size = Math.random() * 3 + 1.5;
-      star.speed = Math.random() * 0.004 + 0.002;
       star.angle = angle;
-      star.radius = radius;
+      star.radius = Math.random() * 0.05; // Start near center
+      star.size = Math.random() * 2 + 1.5 + star.radius * 4;
+      star.baseSpeed = Math.random() * 0.015 + 0.006;
+      star.color = randomColor();
+      // Trail: streakLength previous radii
+      star.trail = [];
+      for (let j = 0; j < streakLength; ++j) {
+        star.trail[j] = star.radius - j * 0.01;
+      }
     }
+    const stars = [];
     for (let i = 0; i < numStars; ++i) {
       const star = {};
       resetStar(star);
       stars.push(star);
     }
 
-    // Buffers
+    // Buffers for all streak vertices
     const positionBuffer = gl.createBuffer();
     const sizeBuffer = gl.createBuffer();
+    const colorBuffer = gl.createBuffer();
 
     function updateAndDrawStars() {
-      // Animate stars
-      const aspect = canvas.width / canvas.height;
+      const asp = aspect();
+      // Each streak is a sequence of points, so we draw numStars * streakLength points
+      const positions = new Float32Array(numStars * streakLength * 2);
+      const sizes = new Float32Array(numStars * streakLength);
+      const colors = new Float32Array(numStars * streakLength * 3);
+
       for (let i = 0; i < numStars; ++i) {
         const star = stars[i];
-        star.radius += star.speed;
-        if (star.radius > 1.2) { // If off screen, reset
+        // Calculate acceleration: speed increases with distance!
+        star.radius += star.baseSpeed * (0.2 + 2.5 * star.radius);
+
+        // Update trail: push new radius at front, pop old one
+        star.trail.unshift(star.radius);
+        if (star.trail.length > streakLength) star.trail.pop();
+
+        // Reset if out of bounds (with a slight margin)
+        if (star.radius > 1.15) {
           resetStar(star);
-        } else {
-          star.x = Math.cos(star.angle) * star.radius;
-          star.y = Math.sin(star.angle) * star.radius;
         }
-      }
-      // Fill attribute arrays
-      const positions = new Float32Array(numStars * 2);
-      const sizes = new Float32Array(numStars);
-      for (let i = 0; i < numStars; ++i) {
-        // Correct for aspect ratio
-        positions[i * 2] = stars[i].x / aspect;
-        positions[i * 2 + 1] = stars[i].y;
-        sizes[i] = stars[i].size;
+
+        // For each streak segment, calculate its position/color/size (fades out)
+        for (let j = 0; j < streakLength; ++j) {
+          const r = star.trail[j];
+          const fade = 1.0 - j / streakLength; // fade out
+          const idx = (i * streakLength + j);
+          // Correct for aspect
+          positions[idx * 2] = Math.cos(star.angle) * r / asp;
+          positions[idx * 2 + 1] = Math.sin(star.angle) * r;
+          // Size: head is sharp, trail is smaller
+          sizes[idx] = Math.max(1.0, star.size * fade * 0.9 + 0.7);
+          // Color: trail is dimmer, a bit bluish at the tail for effect
+          colors[idx * 3] = star.color[0] * fade + 0.2 * (1-fade);
+          colors[idx * 3 + 1] = star.color[1] * fade + 0.2 * (1-fade);
+          colors[idx * 3 + 2] = star.color[2] * fade + 0.7 * (1-fade);
+        }
       }
       // Set position attribute
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -151,11 +190,16 @@
       gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.DYNAMIC_DRAW);
       gl.vertexAttribPointer(sizeLoc, 1, gl.FLOAT, false, 0, 0);
       gl.enableVertexAttribArray(sizeLoc);
+      // Set color attribute
+      gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, colors, gl.DYNAMIC_DRAW);
+      gl.vertexAttribPointer(colorLoc, 3, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(colorLoc);
 
-      // Draw
+      // Clear and draw
       gl.clearColor(0, 0, 0, 1);
       gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.drawArrays(gl.POINTS, 0, numStars);
+      gl.drawArrays(gl.POINTS, 0, numStars * streakLength);
     }
 
     function animate() {
