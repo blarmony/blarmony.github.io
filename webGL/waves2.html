@@ -1,165 +1,177 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>WebGL Triple Double Waves</title>
-  <style>
-    html, body { margin: 0; padding: 0; height: 100%; background: #101820; overflow: hidden; }
-    #wavesCanvas { position: fixed; width: 100vw; height: 100vh; left: 0; top: 0; z-index: 0; display: block; }
-    .description {
-      position: absolute;
-      top: 14px; left: 14px;
-      background: rgba(16,24,32,0.7);
-      color: #fff; padding: 10px 18px;
-      border-radius: 7px; z-index: 1;
-      font-size: 1.12em; font-family: sans-serif;
-      max-width: 90vw;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>WebGL Triple Double Waves</title>
+    <style>
+        html, body { margin: 0; padding: 0; height: 100%; background: #101820; overflow: hidden; }
+        #wavesCanvas { position: fixed; width: 100vw; height: 100vh; left: 0; top: 0; z-index: 0; display: block; }
+        .description {
+            position: absolute;
+            top: 14px; left: 14px;
+            background: rgba(16,24,32,0.7);
+            color: #fff; padding: 10px 18px;
+            border-radius: 7px; z-index: 1;
+            font-size: 1.12em; font-family: sans-serif;
+            max-width: 90vw;
+        }
+    </style>
 </head>
 <body>
-  <canvas id="wavesCanvas"></canvas>
-  <div class="description">
-    This page features three gently animated double waves made by combining pairs of sine waves with different frequencies and amplitudes.
-    Each row uses a unique color palette (green, turquoise, blue) and is accented by occasional yellow and orange highlights on the wave crests, creating a soothing oceanic background.
-  </div>
-  <script>
-    // -- Canvas and GL setup --
-    const canvas = document.getElementById('wavesCanvas');
-    const gl = canvas.getContext('webgl');
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      gl.viewport(0, 0, canvas.width, canvas.height);
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    // -- Shaders --
-    const vertSrc = `
-      attribute float aX;
-      attribute float aRow;
-      uniform float uTime;
-      uniform float uAspect;
-      varying float vRow;
-      varying float vY;
-      varying float vCrest;
-      void main() {
-        float x = aX;
-        float baseY = -0.7 + aRow * 0.7;
-        float y;
-        // Double sine per row
-        if(aRow < 0.5) {
-          y = baseY + 0.10*sin(1.7*x + uTime*0.55) + 0.06*sin(5.2*x - uTime*0.75);
-        } else if(aRow < 1.5) {
-          y = baseY + 0.14*sin(2.2*x + uTime*0.45) + 0.09*sin(7.0*x - uTime*0.52);
-        } else {
-          y = baseY + 0.11*sin(2.6*x + uTime*0.33) + 0.07*sin(4.8*x - uTime*0.66);
+    <canvas id="wavesCanvas"></canvas>
+    <div class="description">
+        This page features three gently animated double waves made by combining pairs of sine waves with different frequencies and amplitudes.
+        Each row uses a unique color palette (green, turquoise, blue) and is accented by occasional yellow and orange highlights on the wave crests, creating a soothing oceanic background.
+    </div>
+    <script>
+        // -- Canvas and GL setup --
+        const canvas = document.getElementById('wavesCanvas');
+        const gl = canvas.getContext('webgl');
+        if (!gl) {
+            alert('Unable to initialize WebGL. Your browser may not support it.');
+            return;
         }
-        float crest = (sin(8.0*x + uTime * 0.7) + 1.0) * 0.5;
-        vRow = aRow;
-        vY = y;
-        vCrest = crest;
-        gl_Position = vec4(x * uAspect, y, 0.0, 1.0);
-      }
-    `;
-    const fragSrc = `
-      precision mediump float;
-      varying float vRow;
-      varying float vY;
-      varying float vCrest;
-      void main() {
-        float alpha = 0.88;
-        vec3 color;
-        if(vRow < 0.5) {
-          color = mix(vec3(0.13,0.88,0.38), vec3(0.23,1.0,0.41), 0.5 + 0.5*vY);
-        } else if(vRow < 1.5) {
-          color = mix(vec3(0.10,0.85,0.82), vec3(0.20,1.0,0.91), 0.5 + 0.5*vY);
-        } else {
-          color = mix(vec3(0.22,0.55,1.0), vec3(0.24,0.88,1.0), 0.5 + 0.5*vY);
+
+        // Enable transparency and depth testing
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.enable(gl.DEPTH_TEST);
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
         }
-        float crestHighlight = smoothstep(0.82, 1.0, vCrest);
-        if(crestHighlight > 0.0 && mod(vY * 10.0 + vRow * 2.0, 2.0) > 1.6) {
-          vec3 highlight = mix(vec3(1.0,0.92,0.36), vec3(1.0,0.69,0.22), step(0.5,vRow));
-          color = mix(color, highlight, crestHighlight * 0.9);
-          alpha = 1.0;
+        window.addEventListener('resize', resize);
+        resize();
+
+        // -- Shaders --
+        const vertSrc = `
+            attribute float aX;
+            attribute float aRow;
+            uniform float uTime;
+            uniform float uAspect;
+            varying float vRow;
+            varying float vY;
+            varying float vCrest;
+            void main() {
+                float x = aX;
+                float baseY = -0.7 + aRow * 0.7;
+                float y;
+                // Double sine per row
+                if(aRow < 0.5) {
+                    y = baseY + 0.10*sin(1.7*x + uTime*0.55) + 0.06*sin(5.2*x - uTime*0.75);
+                } else if(aRow < 1.5) {
+                    y = baseY + 0.14*sin(2.2*x + uTime*0.45) + 0.09*sin(7.0*x - uTime*0.52);
+                } else {
+                    y = baseY + 0.11*sin(2.6*x + uTime*0.33) + 0.07*sin(4.8*x - uTime*0.66);
+                }
+                float crest = (sin(8.0*x + uTime * 0.7) + 1.0) * 0.5;
+                vRow = aRow;
+                vY = y;
+                vCrest = crest;
+                gl_Position = vec4(x * uAspect, y, 0.0, 1.0);
+            }
+        `;
+        const fragSrc = `
+            precision mediump float;
+            varying float vRow;
+            varying float vY;
+            varying float vCrest;
+            void main() {
+                float alpha = 0.88;
+                vec3 color;
+                if(vRow < 0.5) {
+                    color = mix(vec3(0.13,0.88,0.38), vec3(0.23,1.0,0.41), 0.5 + 0.5*vY);
+                } else if(vRow < 1.5) {
+                    color = mix(vec3(0.10,0.85,0.82), vec3(0.20,1.0,0.91), 0.5 + 0.5*vY);
+                } else {
+                    color = mix(vec3(0.22,0.55,1.0), vec3(0.24,0.88,1.0), 0.5 + 0.5*vY);
+                }
+                float crestHighlight = smoothstep(0.82, 1.0, vCrest);
+                if(crestHighlight > 0.0 && mod(vY * 10.0 + vRow * 2.0, 2.0) > 1.6) {
+                    vec3 highlight = mix(vec3(1.0,0.92,0.36), vec3(1.0,0.69,0.22), step(0.5,vRow));
+                    color = mix(color, highlight, crestHighlight * 0.9);
+                    alpha = 1.0;
+                }
+                gl_FragColor = vec4(color, alpha);
+            }
+        `;
+
+        function compile(gl, src, type) {
+            const s = gl.createShader(type);
+            gl.shaderSource(s, src);
+            gl.compileShader(s);
+            if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+                console.error(gl.getShaderInfoLog(s));
+                throw new Error("Shader failed");
+            }
+            return s;
         }
-        gl_FragColor = vec4(color, alpha);
-      }
-    `;
-    function compile(gl, src, type) {
-      const s = gl.createShader(type);
-      gl.shaderSource(s, src);
-      gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-        console.error(gl.getShaderInfoLog(s));
-        throw new Error("Shader failed");
-      }
-      return s;
-    }
-    const vsh = compile(gl, vertSrc, gl.VERTEX_SHADER);
-    const fsh = compile(gl, fragSrc, gl.FRAGMENT_SHADER);
-    const prog = gl.createProgram();
-    gl.attachShader(prog, vsh);
-    gl.attachShader(prog, fsh);
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-      console.error(gl.getProgramInfoLog(prog));
-      throw new Error("Link error");
-    }
-    gl.useProgram(prog);
 
-    // -- Attributes & Uniforms --
-    const aXLoc = gl.getAttribLocation(prog, "aX");
-    const aRowLoc = gl.getAttribLocation(prog, "aRow");
-    const uTimeLoc = gl.getUniformLocation(prog, "uTime");
-    const uAspectLoc = gl.getUniformLocation(prog, "uAspect");
+        const vsh = compile(gl, vertSrc, gl.VERTEX_SHADER);
+        const fsh = compile(gl, fragSrc, gl.FRAGMENT_SHADER);
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vsh);
+        gl.attachShader(prog, fsh);
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+            console.error(gl.getProgramInfoLog(prog));
+            throw new Error("Link error");
+        }
+        gl.useProgram(prog);
 
-    // -- Geometry Preparation --
-    const slices = 240, rows = 3;
-    const xArr = [], rowArr = [];
-    for(let row=0; row<rows; ++row) {
-      for(let i=0; i<=slices; ++i) {
-        let x = -1 + 2*i/slices;
-        xArr.push(x, x);
-        rowArr.push(row, row);
-      }
-    }
-    const xBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, xBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(xArr), gl.STATIC_DRAW);
+        // -- Attributes & Uniforms --
+        const aXLoc = gl.getAttribLocation(prog, "aX");
+        const aRowLoc = gl.getAttribLocation(prog, "aRow");
+        const uTimeLoc = gl.getUniformLocation(prog, "uTime");
+        const uAspectLoc = gl.getUniformLocation(prog, "uAspect");
 
-    const rowBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, rowBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rowArr), gl.STATIC_DRAW);
+        // -- Geometry Preparation --
+        const slices = 240, rows = 3;
+        const xArr = [], rowArr = [];
+        for(let row=0; row<rows; ++row) {
+            for(let i=0; i<=slices; ++i) {
+                let x = -1 + 2*i/slices;
+                xArr.push(x, x);
+                rowArr.push(row, row);
+            }
+        }
+        const xBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, xBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(xArr), gl.STATIC_DRAW);
 
-    // -- Animation loop --
-    function render(time) {
-      gl.clearColor(0.07,0.10,0.16,1);
-      gl.clear(gl.COLOR_BUFFER_BIT);
+        const rowBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, rowBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rowArr), gl.STATIC_DRAW);
 
-      gl.useProgram(prog);
-      gl.uniform1f(uTimeLoc, time*0.001);
-      gl.uniform1f(uAspectLoc, canvas.width/canvas.height);
+        // -- Animation loop --
+        function render(time) {
+            gl.clearColor(0.07,0.10,0.16,1);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      // aX
-      gl.enableVertexAttribArray(aXLoc);
-      gl.bindBuffer(gl.ARRAY_BUFFER, xBuf);
-      gl.vertexAttribPointer(aXLoc, 1, gl.FLOAT, false, 0, 0);
-      // aRow
-      gl.enableVertexAttribArray(aRowLoc);
-      gl.bindBuffer(gl.ARRAY_BUFFER, rowBuf);
-      gl.vertexAttribPointer(aRowLoc, 1, gl.FLOAT, false, 0, 0);
+            gl.useProgram(prog);
+            gl.uniform1f(uTimeLoc, time*0.001);
+            gl.uniform1f(uAspectLoc, canvas.width/canvas.height);
 
-      const vertsPerRow = (slices+1)*2;
-      for(let row=0; row<rows; ++row) {
-        gl.drawArrays(gl.TRIANGLE_STRIP, row*vertsPerRow, vertsPerRow);
-      }
+            // aX
+            gl.enableVertexAttribArray(aXLoc);
+            gl.bindBuffer(gl.ARRAY_BUFFER, xBuf);
+            gl.vertexAttribPointer(aXLoc, 1, gl.FLOAT, false, 0, 0);
+            // aRow
+            gl.enableVertexAttribArray(aRowLoc);
+            gl.bindBuffer(gl.ARRAY_BUFFER, rowBuf);
+            gl.vertexAttribPointer(aRowLoc, 1, gl.FLOAT, false, 0, 0);
 
-      requestAnimationFrame(render);
-    }
-    render(0);
-  </script>
+            const vertsPerRow = (slices+1)*2;
+            for(let row=0; row<rows; ++row) {
+                gl.drawArrays(gl.TRIANGLE_STRIP, row*vertsPerRow, vertsPerRow);
+            }
+
+            requestAnimationFrame(render);
+        }
+        render(0);
+    </script>
 </body>
 </html>
