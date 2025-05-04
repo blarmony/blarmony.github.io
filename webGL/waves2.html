@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WebGL Double Waves Background</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      background: #101820;
+      overflow: hidden;
+    }
+    #wavesCanvas {
+      position: fixed;
+      width: 100vw; height: 100vh;
+      left: 0; top: 0;
+      z-index: 0;
+      display: block;
+    }
+    .description {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      background: rgba(16,24,32,0.7);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 7px;
+      z-index: 1;
+      font-size: 1.12em;
+      font-family: sans-serif;
+      max-width: 90vw;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="wavesCanvas"></canvas>
+  <div class="description">
+    This page features three gently animated double waves made by combining pairs of sine waves with different frequencies and amplitudes.
+    Each row uses a unique color palette (green, turquoise, blue) and is accented by occasional yellow and orange highlights on the wave crests, creating a soothing oceanic background.
+  </div>
+  <script>
+    const canvas = document.getElementById('wavesCanvas');
+    const gl = canvas.getContext('webgl');
+    let width = 0, height = 0;
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Vertex Shader: builds up three rows of double waves
+    const vertexShaderSource = `
+      attribute vec2 aPosition;
+      attribute float aRow;
+      uniform float uTime;
+      uniform float uAspect;
+      varying float vY;
+      varying float vX;
+      varying float vRow;
+      varying float vCrest;
+      void main() {
+        float x = aPosition.x;
+        float y = 0.0;
+        float row = aRow;
+        float baseY = -0.66 + row * 0.66; // -0.66, 0.0, +0.66
+
+        // Each row: two sine waves combined, different params
+        if(row < 0.5) {
+          // Row 0: green
+          y = baseY
+            + 0.10 * sin(1.7 * x + uTime * 0.55)
+            + 0.06 * sin(5.2 * x - uTime * 0.75);
+        } else if(row < 1.5) {
+          // Row 1: turquoise
+          y = baseY
+            + 0.14 * sin(2.2 * x + uTime * 0.45)
+            + 0.09 * sin(7.0 * x - uTime * 0.52);
+        } else {
+          // Row 2: blue
+          y = baseY
+            + 0.11 * sin(2.6 * x + uTime * 0.33)
+            + 0.07 * sin(4.8 * x - uTime * 0.66);
+        }
+        // Crest detection for highlight (normalized to [0,1])
+        float crest = (sin(8.0 * x + uTime * 0.7) + 1.0) * 0.5;
+        vY = y;
+        vX = x;
+        vRow = row;
+        vCrest = crest;
+        gl_Position = vec4(x * uAspect, y, 0.0, 1.0);
+      }
+    `;
+
+    // Fragment Shader: Color by row, crest = highlight
+    const fragmentShaderSource = `
+      precision mediump float;
+      varying float vY;
+      varying float vX;
+      varying float vRow;
+      varying float vCrest;
+      void main() {
+        float alpha = 0.83;
+        vec3 color;
+        // Green base
+        if(vRow < 0.5) {
+          color = mix(vec3(0.11, 0.82, 0.3), vec3(0.16, 0.92, 0.45), 0.5 + 0.5 * vY);
+        }
+        // Turquoise base
+        else if(vRow < 1.5) {
+          color = mix(vec3(0.08, 0.85, 0.82), vec3(0.15, 0.96, 0.91), 0.5 + 0.5 * vY);
+        }
+        // Blue base
+        else {
+          color = mix(vec3(0.18, 0.45, 0.92), vec3(0.38, 0.72, 1.0), 0.5 + 0.5 * vY);
+        }
+        // Occasional highlight: if crest is high and at random intervals, add yellow/orange
+        float crestHighlight = smoothstep(0.82, 1.0, vCrest);
+        float xMod = mod(vX + vRow * 0.3, 0.9);
+        if(crestHighlight > 0.0 && xMod > 0.85) {
+          // Orange/yellow highlight
+          vec3 highlight = mix(vec3(1.0, 0.92, 0.36), vec3(1.0, 0.69, 0.22), step(0.5, vRow));
+          color = mix(color, highlight, crestHighlight * 0.85);
+          alpha = 1.0;
+        }
+        gl_FragColor = vec4(color, alpha);
+      }
+    `;
+
+    function compileShader(gl, source, type) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        throw new Error('Shader compile failed: ' + gl.getShaderInfoLog(shader));
+      }
+      return shader;
+    }
+
+    const vertexShader = compileShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
+    const fragmentShader = compileShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
+
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw new Error('Program link failed: ' + gl.getProgramInfoLog(program));
+    }
+    gl.useProgram(program);
+
+    // Attributes and uniforms
+    const aPosition = gl.getAttribLocation(program, 'aPosition');
+    const aRow = gl.getAttribLocation(program, 'aRow');
+    const uTime = gl.getUniformLocation(program, 'uTime');
+    const uAspect = gl.getUniformLocation(program, 'uAspect');
+
+    // Build mesh: 3 rows, each row is a horizontal strip of verts for the TRIANGLE_STRIP
+    const slices = 180, rows = 3;
+    const vertices = [];
+    const rowIDs = [];
+    for (let row = 0; row < rows; ++row) {
+      const rowY = row; // 0,1,2
+      for (let x = 0; x <= slices; ++x) {
+        const xx = -1 + 2 * x / slices;
+        // Each strip consists of a bottom and a top vertex per x
+        vertices.push(xx, -1);
+        rowIDs.push(rowY);
+        vertices.push(xx, 1);
+        rowIDs.push(rowY);
+      }
+    }
+    const vertexArray = new Float32Array(vertices);
+    const rowArray = new Float32Array(rowIDs);
+
+    // Buffers
+    const vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
+
+    const rowBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, rowBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, rowArray, gl.STATIC_DRAW);
+
+    // Animation loop
+    function render(time) {
+      gl.clearColor(0.07, 0.10, 0.16, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      gl.useProgram(program);
+      gl.uniform1f(uTime, time * 0.001);
+      gl.uniform1f(uAspect, width / height);
+
+      // Setup attribute pointers for each row strip
+      gl.enableVertexAttribArray(aPosition);
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+      gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+
+      gl.enableVertexAttribArray(aRow);
+      gl.bindBuffer(gl.ARRAY_BUFFER, rowBuffer);
+      gl.vertexAttribPointer(aRow, 1, gl.FLOAT, false, 0, 0);
+
+      // Draw each wave row as a triangle strip (2*(slices+1) vertices per row)
+      const vertsPerRow = (slices + 1) * 2;
+      for(let row = 0; row < rows; ++row) {
+        gl.drawArrays(gl.TRIANGLE_STRIP, row * vertsPerRow, vertsPerRow);
+      }
+
+      requestAnimationFrame(render);
+    }
+    render(0);
+  </script>
+</body>
+</html>
