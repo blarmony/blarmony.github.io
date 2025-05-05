@@ -43,9 +43,14 @@
         Each row uses a unique color palette (green, turquoise, blue) and is accented by occasional yellow and orange highlights.
     </div>
     <script>
+    (function() {
         // -- Canvas and GL setup --
         const canvas = document.getElementById('wavesCanvas');
-        const gl = canvas.getContext('webgl', { alpha: false });  // Changed this line
+        const gl = canvas.getContext('webgl2', { antialias: true, alpha: false }) || 
+                  canvas.getContext('experimental-webgl2', { antialias: true, alpha: false }) ||
+                  canvas.getContext('webgl', { antialias: true, alpha: false }) ||
+                  canvas.getContext('experimental-webgl', { antialias: true, alpha: false });
+        
         if (!gl) {
             alert('Unable to initialize WebGL. Your browser may not support it.');
             return;
@@ -78,6 +83,7 @@
 
         // -- Shaders --
         const vertSrc = `
+            precision highp float;
             attribute float aX;
             attribute float aRow;
             uniform float uTime;
@@ -101,31 +107,53 @@
                 vRow = aRow;
                 vY = y;
                 vCrest = crest;
-                gl_Position = vec4(x * uAspect, y, 0.0, 1.0);
+                
+                // Set the final position
+                vec2 pos = vec2(x, y);
+                if (uAspect > 1.0) {
+                    pos.x /= uAspect;
+                } else {
+                    pos.y *= uAspect;
+                }
+                gl_Position = vec4(pos, 0.0, 1.0);
+                gl_PointSize = 2.0;
             }
         `;
 
         const fragSrc = `
-            precision highp float;  // Changed to highp
+            precision highp float;
             varying float vRow;
             varying float vY;
             varying float vCrest;
+            
             void main() {
                 float alpha = 0.88;
                 vec3 color;
+                
+                // Set base colors for each row
                 if(vRow < 0.5) {
-                    color = mix(vec3(0.13,0.88,0.38), vec3(0.23,1.0,0.41), 0.5 + 0.5*vY);
+                    color = mix(vec3(0.13, 0.88, 0.38), vec3(0.23, 1.0, 0.41), 0.5 + 0.5 * vY);
                 } else if(vRow < 1.5) {
-                    color = mix(vec3(0.10,0.85,0.82), vec3(0.20,1.0,0.91), 0.5 + 0.5*vY);
+                    color = mix(vec3(0.10, 0.85, 0.82), vec3(0.20, 1.0, 0.91), 0.5 + 0.5 * vY);
                 } else {
-                    color = mix(vec3(0.22,0.55,1.0), vec3(0.24,0.88,1.0), 0.5 + 0.5*vY);
+                    color = mix(vec3(0.22, 0.55, 1.0), vec3(0.24, 0.88, 1.0), 0.5 + 0.5 * vY);
                 }
+                
+                // Add highlights to wave crests
                 float crestHighlight = smoothstep(0.82, 1.0, vCrest);
-                if(crestHighlight > 0.0 && mod(vY * 10.0 + vRow * 2.0, 2.0) > 1.6) {
-                    vec3 highlight = mix(vec3(1.0,0.92,0.36), vec3(1.0,0.69,0.22), step(0.5,vRow));
+                if(crestHighlight > 0.0) {
+                    vec3 highlight = mix(
+                        vec3(1.0, 0.92, 0.36),  // Yellow
+                        vec3(1.0, 0.69, 0.22),  // Orange
+                        step(0.5, vRow)
+                    );
                     color = mix(color, highlight, crestHighlight * 0.9);
                     alpha = 1.0;
                 }
+                
+                // Ensure we don't render transparent pixels
+                if (alpha < 0.01) discard;
+                
                 gl_FragColor = vec4(color, alpha);
             }
         `;
@@ -170,52 +198,66 @@
         // -- Geometry Preparation --
         const slices = 240, rows = 3;
         const xArr = [], rowArr = [];
+        
+        // Create positions for each row
         for(let row = 0; row < rows; ++row) {
             for(let i = 0; i <= slices; ++i) {
-                let x = -1 + 2*i/slices;
-                xArr.push(x, x);
-                rowArr.push(row, row);
+                const x = -1 + 2 * i / slices;
+                xArr.push(x);
+                rowArr.push(row);
             }
         }
 
-        const xBuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, xBuf);
+        // Create and fill position buffer
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(xArr), gl.STATIC_DRAW);
 
-        const rowBuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, rowBuf);
+        // Create and fill row buffer
+        const rowBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, rowBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rowArr), gl.STATIC_DRAW);
+
+        // Set up vertex attributes
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.vertexAttribPointer(aXLoc, 1, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(aXLoc);
+        
+        gl.bindBuffer(gl.ARRAY_BUFFER, rowBuffer);
+        gl.vertexAttribPointer(aRowLoc, 1, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(aRowLoc);
 
         // -- Animation loop --
         function render(time) {
-            resize();  // Check resize on every frame
+            resize();
             
-            gl.clearColor(0.07, 0.10, 0.16, 1);
+            // Clear the canvas
+            gl.clearColor(0.07, 0.10, 0.16, 1.0);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
+            
+            // Use our shader program
             gl.useProgram(program);
+            
+            // Update uniforms
             gl.uniform1f(uTimeLoc, time * 0.001);
             gl.uniform1f(uAspectLoc, canvas.width / canvas.height);
-
-            // Set up attributes
-            gl.enableVertexAttribArray(aXLoc);
-            gl.bindBuffer(gl.ARRAY_BUFFER, xBuf);
-            gl.vertexAttribPointer(aXLoc, 1, gl.FLOAT, false, 0, 0);
-
-            gl.enableVertexAttribArray(aRowLoc);
-            gl.bindBuffer(gl.ARRAY_BUFFER, rowBuf);
-            gl.vertexAttribPointer(aRowLoc, 1, gl.FLOAT, false, 0, 0);
-
-            // Draw the waves
-            const vertsPerRow = (slices + 1) * 2;
-            for(let row = 0; row < rows; ++row) {
-                gl.drawArrays(gl.TRIANGLE_STRIP, row * vertsPerRow, vertsPerRow);
+            
+            // Draw each row as a line strip
+            gl.lineWidth(2.0);
+            const pointsPerRow = slices + 1;
+            
+            for (let row = 0; row < rows; row++) {
+                const offset = row * pointsPerRow;
+                gl.drawArrays(gl.LINE_STRIP, offset, pointsPerRow);
             }
-
+            
+            // Continue the animation loop
             requestAnimationFrame(render);
         }
 
+        // Start the animation
         requestAnimationFrame(render);
+    })();
     </script>
 </body>
 </html>
