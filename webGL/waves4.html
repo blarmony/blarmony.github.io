@@ -45,13 +45,14 @@
     </div>
     <canvas id="waveCanvas"></canvas>
     <script>
-        const canvas = document.getElementById('waveCanvas');
-        const gl = canvas.getContext('webgl');
+        (function() {
+            const canvas = document.getElementById('waveCanvas');
+            const gl = canvas.getContext('webgl');
 
-        if (!gl) {
-            alert('Unable to initialize WebGL. Your browser may not support it.');
-            return;
-        }
+            if (!gl) {
+                alert('Unable to initialize WebGL. Your browser may not support it.');
+                return;
+            }
 
         // Vertex shader program remains the same
         const vsSource = `
@@ -179,7 +180,7 @@
         function render(time) {
             time *= 0.001;
 
-            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clearColor(1.0, 0.0, 0.0, 1.0);  // Changed to bright red for debugging
             gl.clear(gl.COLOR_BUFFER_BIT);
 
             gl.useProgram(shaderProgram);
@@ -196,7 +197,8 @@
             requestAnimationFrame(render);
         }
 
-        requestAnimationFrame(render);
+            requestAnimationFrame(render);
+        })();
     </script>
 </body>
 </html>
