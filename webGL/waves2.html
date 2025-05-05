@@ -1,16 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>WebGL Triple Double Waves</title>
+    <title>Olas del Mar - Blarmony</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="icon" href="../favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="../logo.png">
     <style>
         html, body { 
             margin: 0; 
             padding: 0; 
             height: 100%; 
             background: linear-gradient(to bottom, #004d7a, #001a1a);
-            overflow: hidden; 
+            overflow: hidden;
+            font-family: 'Georgia', serif;
+            color: #fff;
         }
         #wavesCanvas { 
             position: fixed; 
@@ -21,26 +26,61 @@
             z-index: 0;
             display: block;
         }
-        .description {
+        .poem {
             position: absolute;
-            top: 14px;
-            left: 14px;
-            background: rgba(16,24,32,0.7);
-            color: #fff;
-            padding: 10px 18px;
-            border-radius: 7px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(16, 24, 32, 0.8);
+            color: #f0f0f0;
+            padding: 2rem;
+            border-radius: 10px;
             z-index: 1;
-            font-size: 1.12em;
-            font-family: sans-serif;
             max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            text-align: center;
+            line-height: 1.8;
+            font-style: italic;
+        }
+        .poem h2 {
+            margin-top: 0;
+            color: #4fc3f7;
+            font-family: 'Times New Roman', serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 1.5em;
+            margin-bottom: 1.5rem;
+        }
+        .poem p {
+            margin: 0.8em 0;
         }
     </style>
 </head>
 <body>
+    <script src="../menu.js"></script>
     <canvas id="wavesCanvas"></canvas>
-    <div class="description">
-        This page features three gently animated double waves made by combining pairs of sine waves with different frequencies and amplitudes.
-        Each row uses a unique color palette (green, turquoise, blue) and is accented by occasional yellow and orange highlights.
+    <div class="poem">
+        <h2>Canción de Mar y Estrellas</h2>
+        <p>Las olas traen secretos<br>
+        en su espuma de sal y de luz,<br>
+        y el voro marino<br>
+        es un canto de amor a la luna.</p>
+        
+        <p>¡Ay, barquero de sueños,<br>
+        lleva mi alma en tu barca de plata!<br>
+        Que se pierda en el mar<br>
+        donde duerme la noche callada.</p>
+        
+        <p>Las estrellas son faros<br>
+        en el cielo nocturno y profundo,<br>
+        y mi corazón es un pez<br>
+        que navega en el mar del mundo.</p>
+        
+        <p>¡Ay, barquero de sueños,<br>
+        recógeme cuando el alba despunte!<br>
+        Que me quiero perder<br>
+        donde el mar con el cielo se junte.</p>
     </div>
     <script>
     (function() {
