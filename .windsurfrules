@@ -11,7 +11,6 @@
 - Place in the appropriate category directory
 - Include custom CSS in a `<style>` tag within the head section
 - If using a WebGL or Three.js background, place in the `webGL` directory
-- For complex backgrounds, consider creating a separate CSS file in the category directory
 
 ### WebGL/Three.js Posts
 - All WebGL/Three.js related posts must be placed in the `webGL` directory
@@ -62,6 +61,9 @@ tags: ["tag1", "tag2"]
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	</head>
+
+<script src="../menu.js"></script>
+
 	<body>
 		<main>
 			<div class="content-container">
@@ -71,7 +73,6 @@ tags: ["tag1", "tag2"]
 				
 			</div>
 		</main>
-		<script src="../menu.js"></script>
 	</body>
 </html>
 ```
@@ -107,6 +108,9 @@ tags: ["tag1", "tag2"]
 			}
 		</style>
 	</head>
+
+	<script src="../menu.js"></script>
+	
 	<body class="webgl-background">
 		<!-- Container for the WebGL content -->
 		<div id="container"></div>
@@ -120,118 +124,23 @@ tags: ["tag1", "tag2"]
 			</div>
 		</main>
 
-		<!-- Vertex shader script -->
-		<script id="vertexShader" type="x-shader/x-vertex">
-			varying vec2 vUv;
-
-			void main() {
-				vUv = uv;
-				gl_Position = vec4(position, 1.0);
-			}
-		</script>
-
-		<!-- Fragment shader script -->
-		<script id="fragmentShader" type="x-shader/x-fragment">
-			varying vec2 vUv;
-			uniform float time;
-
-			void main() {
-				// Shader code here
-				gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-			}
-		</script>
-
-		<!-- Import map for three.js library -->
-		<script type="importmap">
-			{
-				"imports": {
-					"three": "https://unpkg.com/three@0.145.0/build/three.module.js",
-					"three/addons/": "https://unpkg.com/three@0.145.0/examples/jsm/"
-				}
-			}
-		</script>
-
-		<!-- JavaScript code for the WebGL application -->
-		<script type="module">
-			// Import three.js library
-			import * as THREE from 'three';
-
-			// Global variables for the application
-			let camera, scene, renderer;
-			let uniforms;
-
-			// Initialize the application
-			init();
-
-			function init() {
-				// Get the container element for the WebGL content
-				const container = document.getElementById('container');
-
-				// Create the camera
-				camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-
-				// Create the scene
-				scene = new THREE.Scene();
-
-				// Create the geometry for the plane
-				const geometry = new THREE.PlaneGeometry(2, 2);
-
-				// Create the uniform variables for the shaders
-				uniforms = {
-					time: { value: 1.0 }
-				};
-
-				// Create the material for the plane
-				const material = new THREE.ShaderMaterial({
-					uniforms: uniforms,
-					vertexShader: document.getElementById('vertexShader').textContent,
-					fragmentShader: document.getElementById('fragmentShader').textContent
-				});
-
-				// Create the mesh for the plane
-				const mesh = new THREE.Mesh(geometry, material);
-
-				// Add the mesh to the scene
-				scene.add(mesh);
-
-				// Create the renderer
-				renderer = new THREE.WebGLRenderer();
-
-				// Set the pixel ratio for the renderer
-				renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
-
-				// Set the size of the renderer
-				renderer.setSize(window.innerWidth, window.innerHeight);
-
-				// Set the animation loop for the renderer
-				renderer.setAnimationLoop(animate);
-
-				// Add the renderer to the container
-				container.appendChild(renderer.domElement);
-
-				// Add event listener for window resize
-				window.addEventListener('resize', onWindowResize);
-			}
-
-			function onWindowResize() {
-				// Update the size of the renderer
-				renderer.setSize(window.innerWidth, window.innerHeight);
-			}
-
-			function animate() {
-				// Update the time uniform
-				uniforms['time'].value = performance.now() / 1000;
-
-				// Render the scene
-				renderer.render(scene, camera);
-			}
-		</script>
-		<script src="../menu.js"></script>
+		<!-- WebGL or Three.js scripts -->
+		<!-- Insert any other required scripts here, for example Prism.js for syntax highlighting -->
 	</body>
 </html>
 ```
 
 ## WebGL/Three.js Performance Guidelines
+
+### IMPORTANT: Code Modification Policy
+- Any WebGL or Three.js code imported from external files, repositories, or copied from other sources is considered FINAL and should NOT be modified
+- These performance guidelines should ONLY be applied when:
+  - Creating a new WebGL/Three.js scene from scratch
+  - Explicitly instructed to optimize existing code
+- For existing code, you may point out potential improvements using the `suggested_improvements` tool, but:
+  - Always ask for permission before making any changes
+  - Clearly explain the benefits of any suggested changes
+  - Respect the original author's implementation choices
 
 ### CRITICAL: Animation Loop Implementation
 - ALWAYS use Three.js's built-in animation loop: `renderer.setAnimationLoop(animate)`

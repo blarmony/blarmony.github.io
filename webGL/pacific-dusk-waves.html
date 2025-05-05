@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pacific Dusk Waves | Blarmony</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="icon" href="../favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="../logo.png">
+    <style>
+        #webgl-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        #waveCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .content-container {
+            background-color: rgba(0, 0, 0, 0.2) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .demo-description {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #4da6ff;
+            text-decoration: none;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body class="webgl-background">
+    <script src="../menu.js"></script>
+    
+    <div id="webgl-container">
+        <canvas id="waveCanvas"></canvas>
+    </div>
+    
+    <main>
+        <div class="content-container">
+        <h1>Pacific Dusk Waves</h1>
+        
+        <div class="demo-description">
+            <p>Through the telephoto lens, the Pacific Ocean reveals its layers at dusk. 
+            Distant swells move in parallel bands, their motion highlighted by the fading light. 
+            Each wave set moves at its own rhythm - some slow and majestic, others quick and subtle, 
+            creating a hypnotic dance of light and shadow across the water's surface.</p>
+        </div>
+
+        <h2>About This Visualization</h2>
+        <p>This WebGL animation simulates the mesmerizing movement of ocean waves at dusk, using custom shaders to create a realistic water surface with dynamic lighting.</p>
+        
+        <h3>Technical Details</h3>
+        <p>The visualization is created using raw WebGL with custom GLSL shaders. It uses multiple wave functions with different frequencies and amplitudes to create a realistic water surface effect.</p>
+        
+        <h3>Features</h3>
+        <ul>
+            <li>Dynamic wave simulation using sine functions</li>
+            <li>Realistic lighting and color gradients</li>
+            <li>Responsive design that works on all screen sizes</li>
+            <li>Hardware-accelerated rendering</li>
+        </ul>
+        
+        <a href="../index.html" class="back-link">← Back to Home</a>
+        </div>
+    </main>
+
+    <script>
+        (function() {
+            const canvas = document.getElementById('waveCanvas');
+            const gl = canvas.getContext('webgl');
+
+            if (!gl) {
+                alert('Unable to initialize WebGL. Your browser may not support it.');
+                return;
+            }
+
+
+            const vsSource = `
+                attribute vec4 aPosition;
+                varying vec2 vTexCoord;
+                
+                void main() {
+                    gl_Position = aPosition;
+                    vTexCoord = aPosition.xy * 0.5 + 0.5;
+                }
+            `;
+
+
+            const fsSource = `
+                precision highp float;
+                
+                varying vec2 vTexCoord;
+                uniform float uTime;
+                uniform vec2 uResolution;
+                
+                vec3 duskColor(float y) {
+                    vec3 horizon = vec3(0.95, 0.6, 0.4);
+                    vec3 zenith = vec3(0.2, 0.3, 0.5);
+                    vec3 water = vec3(0.1, 0.15, 0.25);
+                    
+                    float horizonPos = 0.6;
+                    float horizonWidth = 0.1;
+                    
+                    if (y < 0.5) {
+                        return mix(water, horizon, smoothstep(0.3, 0.5, y));
+                    } else {
+                        return mix(horizon, zenith, smoothstep(horizonPos, horizonPos + horizonWidth, y));
+                    }
+                }
+                
+                float wave(vec2 pos, float freq, float speed, float amplitude, float time) {
+                    float phase = time * speed;
+                    float distortion = sin(pos.x * 0.2 + time * 0.1) * 0.2;
+                    return sin(pos.x * freq + phase + distortion) * amplitude * pos.y;
+                }
+                
+                void main() {
+                    vec2 uv = vTexCoord;
+                    vec2 aspectCorrectedUV = uv * uResolution / min(uResolution.x, uResolution.y);
+                    
+                    float displacement = 0.0;
+                    
+                    displacement += wave(aspectCorrectedUV, 4.0, 1.5, 0.04, uTime);
+                    displacement += wave(aspectCorrectedUV, 6.0, 1.2, 0.03, uTime);
+                    displacement += wave(aspectCorrectedUV, 2.5, 0.8, 0.06, uTime);
+                    displacement += wave(aspectCorrectedUV, 3.0, 0.6, 0.05, uTime);
+                    displacement += wave(aspectCorrectedUV, 1.5, 0.4, 0.08, uTime);
+                    
+                    vec2 distortedUV = vec2(uv.x, uv.y + displacement);
+                    vec3 color = duskColor(distortedUV.y);
+                    
+                    float sparkle = max(0.0, sin(distortedUV.y * 100.0 + uTime * 2.0)) * 0.08;
+                    color += vec3(sparkle);
+                    
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `;
+
+            function createShader(gl, type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    console.error('Shader compilation error:', gl.getShaderInfoLog(shader));
+                    gl.deleteShader(shader);
+                    return null;
+                }
+                return shader;
+            }
+
+
+            const vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                console.error('Program linking error:', gl.getProgramInfoLog(shaderProgram));
+                return;
+            }
+
+            const positions = new Float32Array([
+                -1.0, -1.0,
+                 1.0, -1.0,
+                -1.0,  1.0,
+                -1.0,  1.0,
+                 1.0, -1.0,
+                 1.0,  1.0
+            ]);
+
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+            const positionLocation = gl.getAttribLocation(shaderProgram, 'aPosition');
+            const timeLocation = gl.getUniformLocation(shaderProgram, 'uTime');
+            const resolutionLocation = gl.getUniformLocation(shaderProgram, 'uResolution');
+
+            function resizeCanvas() {
+                const devicePixelRatio = window.devicePixelRatio || 1;
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                
+                if (canvas.width !== width || canvas.height !== height) {
+                    canvas.width = width * devicePixelRatio;
+                    canvas.height = height * devicePixelRatio;
+                    canvas.style.width = width + 'px';
+                    canvas.style.height = height + 'px';
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                }
+            }
+
+
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            function render(time) {
+                time *= 0.001;
+
+                gl.clearColor(0.1, 0.15, 0.25, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+
+                gl.useProgram(shaderProgram);
+
+                gl.enableVertexAttribArray(positionLocation);
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+                gl.uniform1f(timeLocation, time);
+                gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+                requestAnimationFrame(render);
+            }
+
+
+            requestAnimationFrame(render);
+        })();
+    </script>
+</body>
+</html>
