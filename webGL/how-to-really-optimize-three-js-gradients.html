@@ -18,29 +18,40 @@ tags: ["optimization", "performance", "three.js", "mobile"]
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
 		<style>
 			body {
-				margin: 0; 
+				margin: 0;
 				display: block;
 			}
 			#webgl-container {
-				position: absolute;
+				position: fixed;
+				top: 0;
+				left: 0;
 				width: 100%;
 				height: 100%;
 				overflow: hidden;
+				z-index: 0;
 			}
 			.code-comparison {
-				display: grid;
-				grid-template-columns: 1fr 1fr;
-				gap: 1rem;
+				display: flex;
+				flex-direction: column;
 				margin: 2rem 0;
+				max-width: 100%;
 			}
 			.code-comparison > div {
 				background-color: rgba(30, 30, 30, 0.8);
 				padding: 1rem;
 				border-radius: 4px;
+				margin-bottom: 1rem;
+				max-width: 100%;
+				overflow-x: auto;
 			}
-			.code-comparison h4 {
-				margin-top: 0;
-				color: #f0f0f0;
+			.code-comparison > div:nth-child(2) {
+				align-self: flex-end;
+			}
+			.code-comparison > div:nth-child(4) {
+				align-self: flex-end;
+			}
+			.code-comparison > div:nth-child(6) {
+				align-self: flex-end;
 			}
 			.warning-box {
 				background-color: rgba(255, 100, 100, 0.2);
