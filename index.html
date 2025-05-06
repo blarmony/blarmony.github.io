@@ -10,6 +10,134 @@
 </head>
 <body>
     <script src="menu.js"></script>
+    
+    <!-- Animated SVG Jellyfish -->
+    <div class="jellyfish-container">
+        <svg class="jellyfish jellyfish-1" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <!-- Jellyfish body -->
+            <ellipse class="body" cx="100" cy="70" rx="50" ry="40" fill="rgba(157, 78, 221, 0.6)"/>
+            <!-- Jellyfish tentacles -->
+            <path class="tentacle" d="M60,90 Q60,140 50,180" stroke="rgba(157, 78, 221, 0.4)" stroke-width="5" fill="none"/>
+            <path class="tentacle" d="M75,100 Q75,150 70,190" stroke="rgba(157, 78, 221, 0.4)" stroke-width="4" fill="none"/>
+            <path class="tentacle" d="M90,100 Q95,160 90,190" stroke="rgba(157, 78, 221, 0.4)" stroke-width="6" fill="none"/>
+            <path class="tentacle" d="M110,100 Q105,160 110,190" stroke="rgba(157, 78, 221, 0.4)" stroke-width="5" fill="none"/>
+            <path class="tentacle" d="M125,100 Q125,150 130,190" stroke="rgba(157, 78, 221, 0.4)" stroke-width="4" fill="none"/>
+            <path class="tentacle" d="M140,90 Q140,140 150,180" stroke="rgba(157, 78, 221, 0.4)" stroke-width="5" fill="none"/>
+        </svg>
+        
+        <svg class="jellyfish jellyfish-2" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <!-- Jellyfish body -->
+            <ellipse class="body" cx="100" cy="70" rx="40" ry="30" fill="rgba(86, 178, 212, 0.6)"/>
+            <!-- Jellyfish tentacles -->
+            <path class="tentacle" d="M70,90 Q65,140 60,170" stroke="rgba(86, 178, 212, 0.4)" stroke-width="4" fill="none"/>
+            <path class="tentacle" d="M85,95 Q80,145 75,175" stroke="rgba(86, 178, 212, 0.4)" stroke-width="3" fill="none"/>
+            <path class="tentacle" d="M100,95 Q105,155 100,175" stroke="rgba(86, 178, 212, 0.4)" stroke-width="5" fill="none"/>
+            <path class="tentacle" d="M115,95 Q110,155 115,175" stroke="rgba(86, 178, 212, 0.4)" stroke-width="4" fill="none"/>
+            <path class="tentacle" d="M130,90 Q135,140 140,170" stroke="rgba(86, 178, 212, 0.4)" stroke-width="3" fill="none"/>
+        </svg>
+        
+        <svg class="jellyfish jellyfish-3" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <!-- Jellyfish body -->
+            <ellipse class="body" cx="100" cy="70" rx="45" ry="35" fill="rgba(233, 116, 187, 0.6)"/>
+            <!-- Jellyfish tentacles -->
+            <path class="tentacle" d="M65,90 Q60,150 55,180" stroke="rgba(233, 116, 187, 0.4)" stroke-width="5" fill="none"/>
+            <path class="tentacle" d="M80,95 Q75,155 70,185" stroke="rgba(233, 116, 187, 0.4)" stroke-width="4" fill="none"/>
+            <path class="tentacle" d="M95,100 Q100,160 95,185" stroke="rgba(233, 116, 187, 0.4)" stroke-width="6" fill="none"/>
+            <path class="tentacle" d="M110,100 Q105,160 110,185" stroke="rgba(233, 116, 187, 0.4)" stroke-width="5" fill="none"/>
+            <path class="tentacle" d="M125,95 Q130,155 135,185" stroke="rgba(233, 116, 187, 0.4)" stroke-width="4" fill="none"/>
+            <path class="tentacle" d="M140,90 Q145,150 150,180" stroke="rgba(233, 116, 187, 0.4)" stroke-width="5" fill="none"/>
+        </svg>
+    </div>
+
+    <!-- CSS for Jellyfish Animation -->
+    <style>
+        .jellyfish-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+        
+        .jellyfish {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            opacity: 0.8;
+        }
+        
+        .jellyfish-1 {
+            top: 15%;
+            left: 10%;
+            animation: float1 25s ease-in-out infinite, sway1 8s ease-in-out infinite;
+        }
+        
+        .jellyfish-2 {
+            top: 40%;
+            right: 15%;
+            animation: float2 30s ease-in-out infinite, sway2 10s ease-in-out infinite;
+        }
+        
+        .jellyfish-3 {
+            top: 60%;
+            left: 25%;
+            animation: float3 28s ease-in-out infinite, sway3 9s ease-in-out infinite;
+        }
+        
+        .jellyfish .body {
+            animation: pulse 4s ease-in-out infinite;
+        }
+        
+        .jellyfish .tentacle {
+            animation: wiggle 3s ease-in-out infinite;
+            transform-origin: 50% 0;
+        }
+        
+        @keyframes float1 {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-100px); }
+        }
+        
+        @keyframes float2 {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-80px); }
+        }
+        
+        @keyframes float3 {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-120px); }
+        }
+        
+        @keyframes sway1 {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(50px); }
+        }
+        
+        @keyframes sway2 {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-40px); }
+        }
+        
+        @keyframes sway3 {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(60px); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(5deg); }
+            75% { transform: rotate(-5deg); }
+        }
+    </style>
+    
     <main>
         <div class="content-container">
             <h1>Welcome to Blarmony</h1>
