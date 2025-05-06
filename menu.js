@@ -3,7 +3,7 @@ const menuItems = [
     { name: 'Home', link: 'index.html' },
     { name: 'About', link: 'about.html' },
     { name: 'WebGL', link: 'webGL/index.html' },
-    { name: 'Category 2', link: 'category-2/index.html' },
+    { name: 'SVG', link: 'SVG/index.html' },
     { name: 'Category 3', link: 'category-3/index.html' },
     { name: 'Category 4', link: 'category-4/index.html' }
 ];
@@ -11,7 +11,7 @@ const menuItems = [
 // Function to determine if we're in a subdirectory
 function isInSubdirectory() {
     const path = window.location.pathname;
-    return path.includes('/category-') || path.includes('/webGL/');
+    return path.includes('/category-') || path.includes('/webGL/') || path.includes('/SVG/');
 }
 
 // Function to create the header with navigation
