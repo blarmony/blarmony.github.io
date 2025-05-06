@@ -26,13 +26,65 @@ tags: ["animation", "interactive", "svg", "jellyfish"]
             font-family: Arial, sans-serif;
         }
         
+        /* Make the ocean container fixed and cover the entire viewport */
         .ocean {
-            position: relative;
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100vh;
             overflow: hidden;
+            z-index: 0; /* Ensure it's behind other elements */
         }
         
+        /* Make header transparent and position it above the ocean */
+        header {
+            background-color: transparent !important;
+            position: relative;
+            z-index: 10 !important; /* Higher z-index to appear above the ocean */
+            box-shadow: none !important;
+        }
+        
+        /* Style the menu for better visibility */
+        .menu {
+            background-color: rgba(51, 51, 51, 0.7) !important;
+            backdrop-filter: blur(5px) !important;
+        }
+        
+        /* Ensure hamburger menu is visible */
+        .hamburger div {
+            background-color: white !important;
+            box-shadow: 0 0 3px rgba(0, 0, 0, 0.5) !important;
+        }
+        
+        /* Ensure controls appear above the ocean background */
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 20 !important; /* Higher than header to ensure visibility */
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .controls button {
+            padding: 10px 15px;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        
+        .controls button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
         .light-rays {
             position: absolute;
             top: 0;
@@ -76,33 +128,6 @@ tags: ["animation", "interactive", "svg", "jellyfish"]
         .fish {
             position: absolute;
             will-change: transform;
-        }
-        
-        .controls {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .controls button {
-            padding: 10px 15px;
-            background-color: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(5px);
-        }
-        
-        .controls button:hover {
-            background-color: rgba(255, 255, 255, 0.3);
-            transform: scale(1.05);
         }
     </style>
 </head>
