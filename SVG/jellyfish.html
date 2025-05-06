@@ -34,7 +34,7 @@ tags: ["animation", "interactive", "svg", "jellyfish"]
             width: 100%;
             height: 100vh;
             overflow: hidden;
-            z-index: 0; /* Ensure it's behind other elements */
+            z-index: -110; /* Ensure it's behind other elements */
         }
 
         /* Ensure controls appear above the ocean background */
@@ -110,6 +110,7 @@ tags: ["animation", "interactive", "svg", "jellyfish"]
             will-change: transform;
         }
     </style>
+    
 </head>
 <body>
     <script src="../menu.js"></script>
@@ -742,5 +743,7 @@ tags: ["animation", "interactive", "svg", "jellyfish"]
         // Start the scene
         initScene();
     </script>
+    
 </body>
+
 </html>

@@ -221,6 +221,28 @@ tags: ["tag1", "tag2"]
 
 ## Content Guidelines
 
+### SVG Scene Backgrounds
+When implementing SVG scene backgrounds, use the following CSS pattern for the container div to ensure proper layering and full viewport coverage:
+
+```css
+.background-scene {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    z-index: -110; /* Negative z-index ensures it stays behind other elements */
+}
+```
+
+Key points:
+- `position: fixed` keeps the background in place during scrolling
+- `top: 0` and `left: 0` position it at the viewport origin
+- `width: 100%` and `height: 100vh` ensure full viewport coverage
+- `overflow: hidden` prevents scrollbars from appearing
+- `z-index: -110` ensures it stays behind all other content (using 0 or positive values can block interaction with elements)
+
 ### Post Structure
 - Start with a clear introduction explaining the purpose of the post
 - Use proper heading hierarchy (h1 for title, h2 for main sections, h3 for subsections)
