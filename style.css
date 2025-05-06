@@ -319,8 +319,6 @@ body:not(.webgl-background) .content-container {
 
 .webgl-background header {
     background-color: transparent !important;
-    position: absolute;
-    width: 100%;
     z-index: 10;
 }
 
