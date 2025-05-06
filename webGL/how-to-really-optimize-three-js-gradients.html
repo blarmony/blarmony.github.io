@@ -21,7 +21,7 @@ tags: ["optimization", "performance", "three.js", "mobile"]
 				margin: 0; 
 				display: block;
 			}
-			#container {
+			#webgl-container {
 				position: absolute;
 				width: 100%;
 				height: 100%;
@@ -60,7 +60,7 @@ tags: ["optimization", "performance", "three.js", "mobile"]
 	</head>
 	<body class="webgl-background">
 		<!-- Container for the WebGL content -->
-		<div id="container"></div>
+		<div id="webgl-container"></div>
 
 		<main>
 			<div class="content-container">
@@ -331,8 +331,8 @@ const fragmentShader = isMobile
 			init();
 
 			function init() {
-				// Get the container element for the WebGL content
-				const container = document.getElementById('container');
+				// Get the container for the WebGL content
+				const container = document.getElementById('webgl-container');
 
 				// Create the camera
 				camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -383,6 +383,31 @@ const fragmentShader = isMobile
 			function onWindowResize() {
 				// Update the size of the renderer
 				renderer.setSize(window.innerWidth, window.innerHeight);
+				
+				// Update resolution uniform if it exists
+				if (uniforms.resolution) {
+					uniforms.resolution.value.x = window.innerWidth * renderer.getPixelRatio();
+					uniforms.resolution.value.y = window.innerHeight * renderer.getPixelRatio();
+				}
+				
+				// For mobile, handle address bar hiding/showing
+				const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+				if (isMobile) {
+					// Add extra height on mobile to prevent gaps when address bar hides
+					const mobileHeight = window.innerHeight * 1.15;
+					renderer.domElement.style.height = mobileHeight + 'px';
+				}
+				
+				// Update camera aspect ratio if needed
+				if (camera.isOrthographicCamera) {
+					// For orthographic camera, no aspect ratio update needed
+				} else if (camera.isPerspectiveCamera) {
+					camera.aspect = window.innerWidth / window.innerHeight;
+					camera.updateProjectionMatrix();
+				}
+				
+				// Force a render to update the display immediately
+				renderer.render(scene, camera);
 			}
 
 			function animate() {

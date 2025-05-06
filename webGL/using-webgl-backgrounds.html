@@ -25,7 +25,7 @@ tags: ["background", "tutorial"]
 	<body class="webgl-background">
 		<script src="../menu.js"></script>
 		<!-- Container for the WebGL content -->
-		<div id="container"></div>
+		<div id="webgl-container"></div>
 
 		<main>
 			<div class="content-container">
@@ -46,7 +46,7 @@ tags: ["background", "tutorial"]
 					<h3>2. Add the Basic HTML Structure</h3>
 					<ul>
 						<li>Add the <code>webgl-background</code> class to your body tag</li>
-						<li>Create a container div with id="container" for the WebGL canvas</li>
+						<li>Create a container div with id="webgl-container" for the WebGL canvas</li>
 						<li>Add a main content area with the <code>content-container</code> class</li>
 					</ul>
 
@@ -91,7 +91,7 @@ tags: ["background", "tutorial"]
         margin: 0;
         display: block;
       }
-      #container {
+      #webgl-container {
         position: absolute;
         width: 100%;
         height: 100%;
@@ -100,7 +100,7 @@ tags: ["background", "tutorial"]
     &lt;/style&gt;
   &lt;/head&gt;
   &lt;body class="webgl-background"&gt;
-    &lt;div id="container"&gt;&lt;/div&gt;
+    &lt;div id="webgl-container"&gt;&lt;/div&gt;
     &lt;main&gt;
       &lt;div class="content-container"&gt;
         &lt;!-- Your content here --&gt;
@@ -119,7 +119,7 @@ tags: ["background", "tutorial"]
     overflow-y: auto !important;
 }
 
-.webgl-background #container {
+.webgl-background #webgl-container {
     position: fixed;
     width: 100%;
     height: 100%;
@@ -342,7 +342,7 @@ tags: ["background", "tutorial"]
 				 */
 				function init() {
 					// Get the container element for the WebGL content
-					const container = document.getElementById( 'container' );
+					const container = document.getElementById('webgl-container');
 
 					// Create the camera
 					camera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
@@ -425,6 +425,17 @@ tags: ["background", "tutorial"]
 						const mobileHeight = window.innerHeight * 1.15;
 						renderer.domElement.style.height = mobileHeight + 'px';
 					}
+					
+					// Update camera aspect ratio if needed
+					if (camera.isOrthographicCamera) {
+						// For orthographic camera, no aspect ratio update needed
+					} else if (camera.isPerspectiveCamera) {
+						camera.aspect = window.innerWidth / window.innerHeight;
+						camera.updateProjectionMatrix();
+					}
+					
+					// Force a render to update the display immediately
+					renderer.render(scene, camera);
 				}
 				
 				/* 
