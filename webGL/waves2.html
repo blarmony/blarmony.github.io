@@ -1,3 +1,11 @@
+<!--
+---
+title: "Canción de Mar - Ocean Waves with WebGL"
+date: 2025-05-05
+categories: ["webGL"]
+tags: ["webgl", "shaders", "ocean", "animation", "spanish"]
+-->
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -27,61 +35,59 @@
             display: block;
         }
         .poem {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(16, 24, 32, 0.8);
             color: #f0f0f0;
-            padding: 2rem;
-            border-radius: 10px;
-            z-index: 1;
-            max-width: 90vw;
-            max-height: 90vh;
-            overflow-y: auto;
+            padding: 2rem 0;
             text-align: center;
             line-height: 1.8;
             font-style: italic;
         }
-        .poem h2 {
-            margin-top: 0;
+        
+        .poem h1 {
             color: #4fc3f7;
-            font-family: 'Times New Roman', serif;
+            font-family: var(--font-primary);
             text-transform: uppercase;
             letter-spacing: 1px;
-            font-size: 1.5em;
-            margin-bottom: 1.5rem;
+            font-size: 2em;
+            margin-bottom: 2rem;
+            text-align: center;
         }
+        
         .poem p {
-            margin: 0.8em 0;
+            margin: 1.5em 0;
+            font-size: 1.1em;
+            line-height: 1.8;
         }
     </style>
 </head>
-<body>
+<body class="webgl-background">
     <script src="../menu.js"></script>
     <canvas id="wavesCanvas"></canvas>
-    <div class="poem">
-        <h2>Canción de Mar y Estrellas</h2>
-        <p>Las olas traen secretos<br>
-        en su espuma de sal y de luz,<br>
-        y el voro marino<br>
-        es un canto de amor a la luna.</p>
-        
-        <p>¡Ay, barquero de sueños,<br>
-        lleva mi alma en tu barca de plata!<br>
-        Que se pierda en el mar<br>
-        donde duerme la noche callada.</p>
-        
-        <p>Las estrellas son faros<br>
-        en el cielo nocturno y profundo,<br>
-        y mi corazón es un pez<br>
-        que navega en el mar del mundo.</p>
-        
-        <p>¡Ay, barquero de sueños,<br>
-        recógeme cuando el alba despunte!<br>
-        Que me quiero perder<br>
-        donde el mar con el cielo se junte.</p>
-    </div>
+    <main>
+        <div class="content-container">
+            <h1>Canción de Mar y Estrellas</h1>
+            <div class="poem">
+                <p>Las olas traen secretos<br>
+                en su espuma de sal y de luz,<br>
+                y el voro marino<br>
+                es un canto de amor a la luna.</p>
+                
+                <p>¡Ay, barquero de sueños,<br>
+                lleva mi alma en tu barca de plata!<br>
+                Que se pierda en el mar<br>
+                donde duerme la noche callada.</p>
+                
+                <p>Las estrellas son faros<br>
+                en el cielo nocturno y profundo,<br>
+                y mi corazón es un pez<br>
+                que navega en el mar del mundo.</p>
+                
+                <p>¡Ay, barquero de sueños,<br>
+                recógeme cuando el alba despunte!<br>
+                Que me quiero perder<br>
+                donde el mar con el cielo se junte.</p>
+            </div>
+        </div>
+    </main>
     <script>
     (function() {
         // -- Canvas and GL setup --
